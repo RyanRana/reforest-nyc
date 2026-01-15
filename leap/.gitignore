@@ -1,0 +1,172 @@
+# ML Climate Emulator Project - .gitignore
+# Optimized for LEAP Pangeo JupyterHub
+
+# ============================================================================
+# Large Data Files - NEVER commit these!
+# ============================================================================
+# Use OSN cloud storage instead
+*.nc
+*.nc4
+*.zarr/
+*.hdf5
+*.h5
+*.parquet
+*.feather
+
+# Large binary files
+*.npy
+*.npz
+*.pkl
+*.pickle
+
+# Compressed archives
+*.tar
+*.tar.gz
+*.zip
+*.7z
+
+# ============================================================================
+# Model Checkpoints and Weights
+# ============================================================================
+# Store these in /leap-scratch/ or OSN, not in Git
+checkpoints/
+*.ckpt
+*.checkpoint
+*.pth
+*.pt
+*.weights
+*.safetensors
+
+# Orbax checkpoints
+orbax-checkpoints/
+**/orbax_checkpoints/
+
+# ============================================================================
+# Outputs and Results
+# ============================================================================
+outputs/
+results/
+experiments/
+logs/
+runs/
+wandb/
+mlruns/
+tensorboard/
+*.log
+
+# Plots and figures (optional - might want to commit some)
+figures/*.png
+figures/*.jpg
+figures/*.pdf
+plots/*.png
+plots/*.jpg
+plots/*.pdf
+
+# ============================================================================
+# Python
+# ============================================================================
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# Distribution / packaging
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv
+
+# ============================================================================
+# Jupyter Notebook
+# ============================================================================
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Jupyter Lab user settings (optional)
+.jupyter/
+
+# ============================================================================
+# IDE and Editors
+# ============================================================================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ============================================================================
+# Environment and Configuration
+# ============================================================================
+# Environment files with secrets
+.env
+.env.local
+secrets.yaml
+credentials.json
+
+# Configuration overrides
+config/local.yaml
+config/secrets.yaml
+
+# ============================================================================
+# Cache and Temporary Files
+# ============================================================================
+.cache/
+*.cache
+tmp/
+temp/
+.tmp/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Dask temporary files
+dask-worker-space/
+
+# ============================================================================
+# LEAP-specific
+# ============================================================================
+# Scratch directory (if accidentally in repo)
+leap-scratch/
+
+# OSN mount points
+osn-mount/
+
+# ============================================================================
+# Documentation builds
+# ============================================================================
+docs/_build/
+site/
+
+# ============================================================================
+# Keep certain files
+# ============================================================================
+# Use ! to force include certain files if needed
+# !important_checkpoint.ckpt
+# !sample_data/small_dataset.nc

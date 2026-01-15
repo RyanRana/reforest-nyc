@@ -1,0 +1,54 @@
+# Git attributes for NYC LEAP Climate Emulator
+
+# Auto detect text files and perform LF normalization
+* text=auto
+
+# Jupyter Notebooks
+*.ipynb linguist-documentation=false
+*.ipynb linguist-detectable=true
+
+# Python files
+*.py text eol=lf
+*.pyx text eol=lf
+
+# Shell scripts
+*.sh text eol=lf
+
+# Configuration files
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.toml text eol=lf
+
+# Documentation
+*.md text eol=lf
+*.txt text eol=lf
+*.rst text eol=lf
+
+# Binary files
+*.pkl binary
+*.pickle binary
+*.npy binary
+*.npz binary
+*.h5 binary
+*.hdf5 binary
+*.nc binary
+*.zarr binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.pdf binary
+
+# Archives
+*.zip binary
+*.tar binary
+*.gz binary
+*.7z binary
+
+# Model files
+*.pth binary
+*.pt binary
+*.ckpt binary
+*.weights binary
+*.safetensors binary
