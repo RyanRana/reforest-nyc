@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import AboutSection from './AboutSection';
+import StatisticsSection from './StatisticsSection';
 import { useAuth } from '../contexts/AuthContext';
 import '../styles/LandingPage.css';
 
@@ -62,7 +63,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
           <nav className="header-nav">
             <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('map'); }} className="nav-link">Map</a>
             <a href="#" onClick={(e) => { e.preventDefault(); onNavigate('leaderboard'); }} className="nav-link">Leaderboard</a>
-            <a href="#" onClick={(e) => { e.preventDefault(); scrollToAbout(); }} className="nav-link">About</a>
+            <a href="#" onClick={(e) => { e.preventDefault(); scrollToAbout(); }} className="nav-link">Mission</a>
             {user && (
               <button onClick={handleLogout} className="nav-link logout-btn">
                 Logout
@@ -99,7 +100,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* About Section */}
+      {/* Statistics Section */}
+      <StatisticsSection />
+
+      {/* Mission Section */}
       <div id="about-section">
         <AboutSection onNavigate={onNavigate} />
       </div>

@@ -1,20 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase, GreenInitiative } from '../lib/supabase';
 import '../styles/AboutSection.css';
 
 interface AboutSectionProps {
   onNavigate?: (page: 'map') => void;
 }
 
+const INITIATIVE_TYPES = [
+  { value: 'plant_flower', label: '🌸 Plant a Flower', icon: '🌸' },
+  { value: 'hang_vines', label: '🌿 Hang Vines', icon: '🌿' },
+  { value: 'plant_tree', label: '🌳 Plant a Tree', icon: '🌳' },
+  { value: 'general', label: '♻️ General Green Initiative', icon: '♻️' },
+];
+
 const AboutSection: React.FC<AboutSectionProps> = ({ onNavigate }) => {
-  const [openSections, setOpenSections] = useState<{
-    tech: boolean;
-    algorithms: boolean;
-    dataSources: boolean;
-  }>({
-    tech: false,
-    algorithms: false,
-    dataSources: false,
+  const [showMore, setShowMore] = useState(false);
+  const [recentInitiatives, setRecentInitiatives] = useState<GreenInitiative[]>([]);
+  const [loadingInitiatives, setLoadingInitiatives] = useState(true);
+  const [contactForm, setContactForm] = useState({
+    email: '',
+    subject: '',
+    message: ''
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    loadRecentInitiatives();
+  }, []);
+
+  const loadRecentInitiatives = async () => {
+    try {
+      setLoadingInitiatives(true);
+      
+      const { data, error } = await supabase
+        .from('green_initiatives')
+        .select(`
+          *,
+          user_profile:user_profiles(*)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      if (error) throw error;
+
+      setRecentInitiatives(data || []);
+    } catch (error) {
+      console.error('Error loading recent initiatives:', error);
+    } finally {
+      setLoadingInitiatives(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric' 
+    });
+  };
+
+  const getInitiativeIcon = (type: string) => {
+    return INITIATIVE_TYPES.find(t => t.value === type)?.icon || '♻️';
+  };
 
   const handleMapClick = () => {
     if (onNavigate) {
@@ -22,298 +72,385 @@ const AboutSection: React.FC<AboutSectionProps> = ({ onNavigate }) => {
     }
   };
 
-  const toggleSection = (section: 'tech' | 'algorithms' | 'dataSources') => {
-    setOpenSections(prev => ({
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitStatus('idle');
+    setErrorMessage('');
+
+    try {
+      const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+      const response = await fetch(`${API_BASE_URL}/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: contactForm.email,
+          subject: contactForm.subject,
+          message: contactForm.message,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to send message');
+      }
+
+      setSubmitStatus('success');
+      setContactForm({ email: '', subject: '', message: '' });
+      
+      // Reset success message after 5 seconds
+      setTimeout(() => {
+        setSubmitStatus('idle');
+      }, 5000);
+    } catch (error: any) {
+      setSubmitStatus('error');
+      setErrorMessage(error.message || 'Failed to send message. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleContactChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setContactForm(prev => ({
       ...prev,
-      [section]: !prev[section],
+      [name]: value
     }));
   };
 
   return (
     <div className="about-section">
-      {/* Explore the Map */}
-      <section className="about-subsection explore-map">
+      {/* Mission Section */}
+      <section className="about-subsection mission-section">
         <div className="subsection-content">
-          <h2 className="subsection-title">Explore the Map</h2>
-          <div className="map-preview-container" onClick={handleMapClick}>
-            <div className="map-frame">
-              <img 
-                src="/map-preview.jpg" 
-                alt="NYC Climate Resilience Map - Priority Scores Visualization" 
-                className="map-preview-image"
-                loading="lazy"
-              />
-              <div className="map-overlay">
-                <div className="map-click-hint">
-                  <span className="click-text">Click to explore interactive map</span>
-                  <span className="click-arrow">→</span>
+          <h2 className="subsection-title">Mission</h2>
+          <div className="mission-text">
+            <p className="subsection-text">
+              No matter how strong and accurate climate forecasting models are, meaningful change does not happen fast without government intervention, infrastructure adoption, or emergencies. Meaningful change ONLY happens when you put the power in the people.
+            </p>
+            <p className="subsection-text">
+              This project embodies a fundamental shift from top-down policy making to grassroots empowerment: "Ask not what your country can do for you, but what you can do for your country." - JFK
+            </p>
+            {!showMore && (
+              <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                <button className="read-more-btn" onClick={() => setShowMore(true)}>
+                  Read more
+                </button>
+                </div>
+            )}
+            {showMore && (
+              <div className="expanded-content">
+                <p className="subsection-text">
+                  We are a multi-talented team of students across several universities tasked with solving climate change in NYC but specifically in Staten Island where roughly 70% of resident properties have a backyard where vegetation can potentially happen. We iterated on dozens of ideas on how to combat different climate issues such as flooding, emergency evacs, etc but we decided to build something that doesn't rely on authorities to create real change fast.
+                </p>
+                <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
+                  <button className="read-less-btn" onClick={() => setShowMore(false)}>
+                    Show less
+                  </button>
                 </div>
               </div>
-            </div>
-            <p className="map-description">
-              Interactive visualization showing priority scores, environmental justice indicators, heat vulnerability, and air quality data across NYC ZIP codes. Click any area to see detailed impact predictions and recommendations.
-            </p>
+            )}
           </div>
         </div>
       </section>
 
-      {/* What It Does */}
-      <section className="about-subsection what-it-does">
+      {/* What We Do Section */}
+      <section className="about-subsection what-we-do">
         <div className="subsection-content">
-          <h2 className="subsection-title">What It Does</h2>
-          <p className="subsection-text">
-            ReforestNYC is a data-driven platform that identifies optimal street tree planting locations across New York City to maximize climate resilience and environmental justice. Powered by a sophisticated combination of low-latency C++ neural networks and random forest ensemble models, the system analyzes heat vulnerability, air quality, existing tree density, and socioeconomic factors to provide evidence-based recommendations that ensure every dollar invested in tree planting delivers maximum impact where it matters most.
-          </p>
-          <p className="subsection-text">
-            The platform leverages cutting-edge machine learning architecture: C++ neural networks deliver sub-10ms predictions for real-time interactivity, while random forest models capture complex feature interactions and provide interpretable insights. This hybrid approach combines the speed of neural networks with the robustness and interpretability of ensemble methods, enabling city planners, advocates, and citizens to understand where trees should be planted to combat urban heat islands, improve air quality, and prioritize vulnerable communities.
-          </p>
+          <h2 className="subsection-title">What We Do</h2>
+          <div className="what-we-do-grid">
+            <div className="what-we-do-card">
+              <div className="what-we-do-icon">🧮</div>
+              <h3 className="what-we-do-title">Advanced Computation</h3>
+              <p className="what-we-do-description">
+                Our platform leverages cutting-edge machine learning models, including C++ neural networks for sub-10ms predictions and random forest ensembles for robust impact forecasting. We analyze heat vulnerability, air quality, tree density, and socioeconomic factors to identify optimal locations for climate resilience interventions.
+              </p>
+            </div>
+            <div className="what-we-do-card">
+              <div className="what-we-do-icon">🤝</div>
+              <h3 className="what-we-do-title">Community Engagement</h3>
+              <p className="what-we-do-description">
+                We empower residents to take direct action through neighborhood reviews, green initiative sharing, and collaborative tracking. By putting climate data in the hands of communities, we enable grassroots change that doesn't wait for institutional responses. Every tree planted, every initiative shared, compounds into measurable environmental impact.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* Open Source */}
-      <section className="about-subsection open-source">
+      {/* Recent Green Initiatives */}
+      <section className="about-subsection recent-initiatives">
         <div className="subsection-content">
-          <h2 className="subsection-title">Open Source</h2>
-          <div className="open-source-content">
+          <h2 className="subsection-title">Recent Green Initiatives</h2>
+          {loadingInitiatives ? (
+            <div className="initiatives-loading">Loading initiatives...</div>
+          ) : recentInitiatives.length === 0 ? (
+            <div className="no-initiatives">
+              <span className="empty-icon">🌱</span>
+              <p>No initiatives shared yet. Be the first to share!</p>
+            </div>
+          ) : (
+            <div className="initiatives-grid-landing">
+              {recentInitiatives.map((initiative) => (
+                <div key={initiative.id} className="initiative-card-landing">
+                  <div className="initiative-image-wrapper-landing">
+                    <img 
+                      src={initiative.image_url} 
+                      alt={initiative.caption || 'Green initiative'} 
+                      className="initiative-image-landing"
+                    />
+                    <div className="initiative-type-badge-landing">
+                      {getInitiativeIcon(initiative.initiative_type)}
+                    </div>
+                  </div>
+                  <div className="initiative-content-landing">
+                    <div className="initiative-header-row-landing">
+                      {initiative.user_profile?.company_logo_url ? (
+                        <div className="initiative-author-landing corporate">
+                          <img 
+                            src={initiative.user_profile.company_logo_url} 
+                            alt="Company logo" 
+                            className="author-logo-landing"
+                          />
+                          <div className="author-info-landing">
+                            <span className="author-name-landing">
+                              🏢 {initiative.user_profile.company_domain}
+                            </span>
+                            <span className="initiative-date-landing">{formatDate(initiative.created_at)}</span>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="initiative-author-landing">
+                          <div className="author-icon-landing">🌱</div>
+                          <div className="author-info-landing">
+                            <span className="author-name-landing">
+                              {initiative.user_profile?.email.split('@')[0]}
+                            </span>
+                            <span className="initiative-date-landing">{formatDate(initiative.created_at)}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    {initiative.caption && (
+                      <p className="initiative-caption-landing">{initiative.caption}</p>
+                    )}
+                    <div className="initiative-location-landing">
+                      📍 ZIP: {initiative.zipcode}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </section>
+
+      {/* How Can You Predict the Future */}
+      <section className="about-subsection trust-section">
+        <div className="subsection-content">
+          <h2 className="subsection-title">How Can You Predict the Future? Why Should We Trust You?</h2>
             <p className="subsection-text">
-              ReforestNYC is built on open-source principles, making our code, data pipelines, and machine learning models publicly available for transparency, collaboration, and community improvement.
+            Transparency and scientific rigor are at the core of our platform. All our code, data pipelines, machine learning models, and research documentation are open source and publicly available. We believe that trust comes from openness, peer review, and community verification.
             </p>
-            <div className="github-link-container">
+          <div className="trust-links">
               <a 
-                href="https://github.com/RyanRana/Mesh-Landing" 
+              href="https://github.com/RyanRana/nycleap/tree/main" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="github-link"
+              className="trust-link"
               >
-                <svg className="github-icon" width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+                <span>
+                  <svg className="github-icon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
                   <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.17 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.463-1.11-1.463-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0112 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.167 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
                 </svg>
-                <span className="github-text">View on GitHub</span>
-                <span className="github-arrow">→</span>
-              </a>
-            </div>
-            <p className="subsection-text" style={{ marginTop: '1.5rem', fontSize: '0.95rem', color: '#718096' }}>
-              Contribute, fork, or use our codebase to build your own climate resilience tools. All datasets, models, and documentation are freely available.
-            </p>
+                </span>
+              <span>View Open Source Code</span>
+              <span className="link-arrow">→</span>
+            </a>
+            <a 
+              href="https://github.com/RyanRana/nycleap/blob/main/urban%20futures/docs/TECHNICAL_DOCUMENTATION.md" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="trust-link"
+            >
+              <span>📚</span>
+              <span>Research & Development</span>
+              <span className="link-arrow">→</span>
+            </a>
+            <a 
+              href="https://github.com/RyanRana/nycleap/blob/main/urban%20futures/docs/QUICKSTART.md" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="trust-link"
+            >
+              <span>🚀</span>
+              <span>Run & Train Locally</span>
+              <span className="link-arrow">→</span>
+            </a>
           </div>
         </div>
       </section>
 
-      {/* Tech Stack */}
-      <section className="about-subsection tech-stack">
+      {/* About Our Team */}
+      <section className="about-subsection team-section">
         <div className="subsection-content">
-          <div className="dropdown-header" onClick={() => toggleSection('tech')}>
-            <div>
-              <h2 className="dropdown-title">Technology Stack</h2>
-              <p className="dropdown-description">Frontend, backend, data processing, and machine learning technologies powering the platform</p>
-            </div>
-            <span className={`dropdown-arrow ${openSections.tech ? 'open' : ''}`}>▼</span>
-          </div>
-          {openSections.tech && (
-            <div className="dropdown-content">
-              <div className="tech-grid">
-            <div className="tech-item">
-              <div className="tech-category">Frontend</div>
-              <div className="tech-list">
-                <span>React 18</span>
-                <span>TypeScript</span>
-                <span>Mapbox GL JS</span>
-                <span>CSS Modules</span>
-              </div>
-            </div>
-            <div className="tech-item">
-              <div className="tech-category">Backend</div>
-              <div className="tech-list">
-                <span>Node.js</span>
-                <span>Express</span>
-                <span>TypeScript</span>
-                <span>REST API</span>
-              </div>
-            </div>
-            <div className="tech-item">
-              <div className="tech-category">Data Processing</div>
-              <div className="tech-list">
-                <span>Python 3.8+</span>
-                <span>Pandas</span>
-                <span>GeoPandas</span>
-                <span>Scikit-learn</span>
-              </div>
-            </div>
-            <div className="tech-item">
-              <div className="tech-category">Machine Learning</div>
-              <div className="tech-list">
-                <span>C++17 Neural Networks</span>
-                <span>Random Forest</span>
-                <span>Ensemble Methods</span>
-                <span>H3 Geospatial</span>
-              </div>
-            </div>
-            <div className="tech-item">
-              <div className="tech-category">Data Storage</div>
-              <div className="tech-list">
-                <span>Parquet</span>
-                <span>GeoJSON</span>
-                <span>Shapefiles</span>
-                <span>JSON Metadata</span>
-              </div>
-            </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Algorithms */}
-      <section 
-        className="about-subsection algorithms"
-        style={{
-          backgroundImage: 'url(/landing.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="subsection-content">
-          <div className="dropdown-header" onClick={() => toggleSection('algorithms')}>
-            <div>
-              <h2 className="dropdown-title">Algorithms & Methodology</h2>
-              <p className="dropdown-description">Neural networks, random forests, and hybrid models for impact prediction</p>
-            </div>
-            <span className={`dropdown-arrow ${openSections.algorithms ? 'open' : ''}`}>▼</span>
-          </div>
-          {openSections.algorithms && (
-            <div className="dropdown-content">
-              <div className="algorithm-content">
-            <div className="algorithm-item">
-              <h3 className="algorithm-name">Low-Latency C++ Neural Networks</h3>
-              <p className="algorithm-description">
-                Our core prediction engine leverages custom-built neural networks implemented in C++17 for sub-10ms inference latency. The multi-layer perceptron architecture processes geospatial features, environmental indicators, and socioeconomic factors to predict temperature reduction (°F) and PM2.5 removal (lbs/year) with high precision. Compiled to native machine code, these models deliver real-time predictions at scale, enabling interactive exploration of thousands of ZIP codes simultaneously.
-              </p>
-            </div>
-            <div className="algorithm-item">
-              <h3 className="algorithm-name">Random Forest Ensemble</h3>
-              <p className="algorithm-description">
-                Complementing the neural network, a random forest model captures non-linear interactions and feature importance across 200+ decision trees. This ensemble approach provides robust predictions for complex urban environments where multiple factors interact synergistically. The random forest handles feature interactions that linear models miss, particularly the relationship between tree density, heat vulnerability, and air quality improvements.
-              </p>
-            </div>
-            <div className="algorithm-item">
-              <h3 className="algorithm-name">Hybrid Model Architecture</h3>
-              <p className="algorithm-description">
-                The system combines neural network predictions with random forest outputs through a weighted ensemble, optimizing for both accuracy and interpretability. Neural networks excel at capturing complex patterns in high-dimensional space, while random forests provide feature importance rankings and handle missing data gracefully. This hybrid approach achieves superior performance compared to either model alone, with neural networks providing speed and random forests ensuring robustness.
-              </p>
-            </div>
-            <div className="algorithm-item">
-              <h3 className="algorithm-name">Priority Score Calculation</h3>
-              <p className="algorithm-description">
-                Combines normalized heat vulnerability, air quality metrics, tree density gaps, and pollution proxies with weighted coefficients (35% heat, 25% air quality, 25% tree gap, 15% pollution proxy). The model outputs are integrated into a unified priority score that maximizes impact per dollar invested.
-              </p>
-            </div>
-            <div className="algorithm-item">
-              <h3 className="algorithm-name">Environmental Justice Amplification</h3>
-              <p className="algorithm-description">
-                Applies a 40% multiplier to priority scores for neighborhoods with high EJ indicators (heat vulnerability, indoor environmental complaints, population density), ensuring vulnerable communities are prioritized. Both neural network and random forest models incorporate EJ features as explicit inputs, ensuring environmental justice is baked into the prediction architecture.
-              </p>
-            </div>
-            <div className="algorithm-item">
-              <h3 className="algorithm-name">Spatial Optimization</h3>
-              <p className="algorithm-description">
-                Uses H3 geospatial indexing for efficient spatial queries and ZIP-level aggregation for city-wide optimization. The C++ inference engine processes spatial features in parallel, enabling real-time updates as users explore different neighborhoods. Random forest feature importance guides spatial feature engineering, identifying which geographic relationships matter most for impact prediction.
-              </p>
-            </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Data Sources */}
-      <section className="about-subsection data-sources">
-        <div className="subsection-content">
-          <div className="dropdown-header" onClick={() => toggleSection('dataSources')}>
-            <div>
-              <h2 className="dropdown-title">Data Sources</h2>
-              <p className="dropdown-description">NYC Open Data sources including trees, heat vulnerability, air quality, and environmental justice indicators</p>
-            </div>
-            <span className={`dropdown-arrow ${openSections.dataSources ? 'open' : ''}`}>▼</span>
-          </div>
-          {openSections.dataSources && (
-            <div className="dropdown-content">
-              <div className="data-grid">
-            <div className="data-item">
-              <h3 className="data-name">Street Trees 2015</h3>
-              <p className="data-description">Complete inventory of 683,000+ street trees across NYC</p>
-              <p className="data-source">NYC Parks Department</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">Heat Vulnerability Index</h3>
-              <p className="data-description">ZIP-level heat vulnerability scores</p>
-              <p className="data-source">NYC Department of Health</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">Air Quality Data</h3>
-              <p className="data-description">Community District PM2.5 and NO2 measurements</p>
-              <p className="data-source">NYC Community Air Survey</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">Fuel Oil Usage</h3>
-              <p className="data-description">ZIP-level fuel oil consumption data</p>
-              <p className="data-source">NYC Department of Buildings</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">Indoor Environmental</h3>
-              <p className="data-description">311 complaints by ZIP code</p>
-              <p className="data-source">NYC Open Data</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">Cooling Sites</h3>
-              <p className="data-description">Cooling center locations</p>
-              <p className="data-source">NYC Emergency Management</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">ZIP Boundaries</h3>
-              <p className="data-description">Geographic boundaries for ZIP codes</p>
-              <p className="data-source">TIGER/Line Shapefiles</p>
-            </div>
-            <div className="data-item">
-              <h3 className="data-name">Population Data</h3>
-              <p className="data-description">Community District population statistics</p>
-              <p className="data-source">US Census Bureau</p>
-            </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* About the Team */}
-      <section 
-        className="about-subsection team-section"
-        style={{
-          backgroundImage: 'url(/untitled.jpg)',
-          backgroundSize: 'cover',
-          backgroundPosition: 'center'
-        }}
-      >
-        <div className="subsection-content">
-          <h2 className="subsection-title">About the Team</h2>
-          <div className="team-content">
-            <div className="team-member">
+          <h2 className="subsection-title">About Our Team</h2>
+          <div className="team-grid">
+            <div className="team-member-card">
               <div className="team-photo-placeholder">
                 <span className="photo-placeholder-text">Photo</span>
               </div>
-              <div className="team-info">
-                <h3 className="team-name">Team Member</h3>
-                <p className="team-role">Role & Description</p>
-                <p className="team-bio">
-                  Brief bio about the team member and their contribution to the project.
-                </p>
+              <h3 className="team-name">Ryan</h3>
+            </div>
+            <div className="team-member-card">
+              <div className="team-photo-placeholder">
+                <span className="photo-placeholder-text">Photo</span>
               </div>
+              <h3 className="team-name">Vincent</h3>
+            </div>
+            <div className="team-member-card">
+              <div className="team-photo-placeholder">
+                <span className="photo-placeholder-text">Photo</span>
+              </div>
+              <h3 className="team-name">Julia</h3>
+            </div>
+            <div className="team-member-card">
+              <div className="team-photo-placeholder">
+                <span className="photo-placeholder-text">Photo</span>
+              </div>
+              <h3 className="team-name">Chaitanya</h3>
+            </div>
+            <div className="team-member-card">
+              <div className="team-photo-placeholder">
+                <span className="photo-placeholder-text">Photo</span>
+              </div>
+              <h3 className="team-name">Kai</h3>
+            </div>
+              </div>
+        </div>
+      </section>
+
+      {/* Get in Touch */}
+      <section className="about-subsection contact-section">
+        <div className="subsection-content">
+          <h2 className="subsection-title">Get in Touch</h2>
+          <p className="subsection-text" style={{ textAlign: 'center', marginBottom: '2rem' }}>
+            Have questions, suggestions, or want to collaborate? We'd love to hear from you.
+          </p>
+          
+          <form className="contact-form" onSubmit={handleContactSubmit}>
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                type="email"
+                id="email"
+                name="email"
+                value={contactForm.email}
+                onChange={handleContactChange}
+                required
+                placeholder="your.email@example.com"
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="subject">Subject</label>
+              <input
+                type="text"
+                id="subject"
+                name="subject"
+                value={contactForm.subject}
+                onChange={handleContactChange}
+                required
+                placeholder="What's this about?"
+                className="form-input"
+              />
+            </div>
+
+            <div className="form-group">
+              <label htmlFor="message">Message</label>
+              <textarea
+                id="message"
+                name="message"
+                value={contactForm.message}
+                onChange={handleContactChange}
+                required
+                rows={6}
+                placeholder="Tell us what's on your mind..."
+                className="form-textarea"
+              />
+            </div>
+
+            {submitStatus === 'success' && (
+              <div className="form-message form-message-success">
+                ✓ Message sent successfully! We'll get back to you soon.
+              </div>
+            )}
+
+            {submitStatus === 'error' && (
+              <div className="form-message form-message-error">
+                ✗ {errorMessage}
+            </div>
+          )}
+
+            <button 
+              type="submit" 
+              className="contact-submit-btn"
+              disabled={submitting}
+            >
+              {submitting ? 'Sending...' : 'Send Message'}
+            </button>
+          </form>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="landing-footer">
+        <div className="footer-content">
+          <div className="footer-brand">
+            <div className="brand-name-footer">ReforestNYC</div>
+            <p className="footer-tagline">Empowering communities through data-driven climate action</p>
+          </div>
+          <div className="footer-links">
+            <div className="footer-column">
+              <h4 className="footer-heading">Platform</h4>
+              <a href="#" onClick={(e) => { e.preventDefault(); handleMapClick(); }} className="footer-link">Interactive Map</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); handleMapClick(); }} className="footer-link">Leaderboard</a>
+            </div>
+            <div className="footer-column">
+              <h4 className="footer-heading">Resources</h4>
+              <a 
+                href="https://github.com/RyanRana/nycleap/tree/main" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="footer-link"
+              >
+                Source Code
+              </a>
+              <a 
+                href="https://github.com/RyanRana/nycleap/blob/main/urban%20futures/docs/TECHNICAL_DOCUMENTATION.md" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="footer-link"
+              >
+                Documentation
+              </a>
+            </div>
+            <div className="footer-column">
+              <h4 className="footer-heading">About</h4>
+              <a href="#" onClick={(e) => { e.preventDefault(); window.scrollTo({ top: 0, behavior: 'smooth' }); }} className="footer-link">Mission</a>
+              <a href="#" onClick={(e) => { e.preventDefault(); document.getElementById('about-section')?.scrollIntoView({ behavior: 'smooth' }); }} className="footer-link">Team</a>
             </div>
           </div>
         </div>
-      </section>
+        <div className="footer-bottom">
+          <p className="footer-copyright">© {new Date().getFullYear()} ReforestNYC. All rights reserved.</p>
+          <p className="footer-license">Open source under MIT License</p>
+        </div>
+      </footer>
     </div>
   );
 };
 
 export default AboutSection;
-

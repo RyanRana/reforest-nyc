@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import nodemailer from 'nodemailer';
 import { H3Service } from './services/h3Service';
 import { SimulationService } from './services/simulationService';
 import { CongressionalService } from './services/congressionalService';
@@ -203,6 +204,97 @@ app.get('/predict', async (req, res) => {
   } catch (error: any) {
     console.error('Error running prediction:', error);
     res.status(500).json({ error: 'Internal server error', message: error.message });
+  }
+});
+
+// Contact form endpoint
+app.post('/contact', async (req, res) => {
+  try {
+    const { email, subject, message } = req.body;
+
+    // Validate input
+    if (!email || !subject || !message) {
+      return res.status(400).json({ error: 'All fields are required' });
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    const recipientEmail = 'ryanrana04@gmail.com';
+    
+    // Format email content
+    const emailContent = `
+New Contact Form Submission from ReforestNYC
+
+From: ${email}
+Subject: ${subject}
+
+Message:
+${message}
+
+---
+This message was sent from the ReforestNYC contact form.
+Timestamp: ${new Date().toISOString()}
+    `.trim();
+
+    // Try to send email using nodemailer
+    // Check if email credentials are configured
+    const emailUser = process.env.EMAIL_USER;
+    const emailPass = process.env.EMAIL_PASS;
+    const emailService = process.env.EMAIL_SERVICE || 'gmail';
+
+    if (emailUser && emailPass) {
+      // Create transporter with email service credentials
+      const transporter = nodemailer.createTransport({
+        service: emailService,
+        auth: {
+          user: emailUser,
+          pass: emailPass
+        }
+      });
+
+      // Send email
+      await transporter.sendMail({
+        from: emailUser,
+        replyTo: email,
+        to: recipientEmail,
+        subject: `[ReforestNYC Contact] ${subject}`,
+        text: emailContent,
+        html: `
+          <h2>New Contact Form Submission from ReforestNYC</h2>
+          <p><strong>From:</strong> ${email}</p>
+          <p><strong>Subject:</strong> ${subject}</p>
+          <hr>
+          <p><strong>Message:</strong></p>
+          <p>${message.replace(/\n/g, '<br>')}</p>
+          <hr>
+          <p><small>This message was sent from the ReforestNYC contact form.<br>
+          Timestamp: ${new Date().toISOString()}</small></p>
+        `
+      });
+
+      console.log(`✅ Email sent successfully to ${recipientEmail} from ${email}`);
+    } else {
+      // Log email if credentials not configured
+      console.log('=== CONTACT FORM SUBMISSION ===');
+      console.log(`To: ${recipientEmail}`);
+      console.log(`From: ${email}`);
+      console.log(`Subject: ${subject}`);
+      console.log(`Message: ${message}`);
+      console.log('================================');
+      console.log('⚠️  Email credentials not configured. Set EMAIL_USER and EMAIL_PASS environment variables to enable email sending.');
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Message sent successfully'
+    });
+  } catch (error: any) {
+    console.error('Error processing contact form:', error);
+    res.status(500).json({ error: 'Failed to send message', message: error.message });
   }
 });
 
