@@ -57,7 +57,6 @@ const LandingPage: React.FC<LandingPageProps> = ({ onNavigate }) => {
         {/* Header Navigation */}
         <header className="landing-header">
           <div className="header-left">
-            <img src="/untitled-transparent.png" alt="ReforestNYC Logo" className="header-logo" loading="eager" />
             <div className="brand-name">ReforestNYC</div>
           </div>
           <nav className="header-nav">

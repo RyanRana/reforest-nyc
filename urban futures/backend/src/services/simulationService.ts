@@ -10,6 +10,8 @@ interface SimulationResult {
   recommended_tree_count: number;
   projected_temp_reduction_F: number;
   projected_pm25_reduction_lbs_per_year: number;
+  projected_co2_reduction_kg_per_year: number;
+  current_co2_reduction_kg_per_year: number;
   priority_final: number;
   ej_score: number;
 }
@@ -48,6 +50,12 @@ export class SimulationService {
       throw new Error('ZIP code data not found');
     }
     
+    // Calculate CO2 reduction (fallback if not in zipData)
+    const current_co2 = zipData.current_co2_reduction_kg_per_year || 
+      (zipData.features.tree_count * 21.77); // 21.77 kg CO2 per tree per year
+    const projected_co2 = zipData.projected_co2_reduction_kg_per_year || 
+      (zipData.recommended_tree_count * 21.77);
+    
     return {
       zipcode,
       lat,
@@ -56,6 +64,8 @@ export class SimulationService {
       recommended_tree_count: zipData.recommended_tree_count,
       projected_temp_reduction_F: zipData.projected_temp_reduction_F,
       projected_pm25_reduction_lbs_per_year: zipData.projected_pm25_reduction_lbs_per_year,
+      projected_co2_reduction_kg_per_year: projected_co2,
+      current_co2_reduction_kg_per_year: current_co2,
       priority_final: zipData.priority_final,
       ej_score: zipData.ej_score
     };

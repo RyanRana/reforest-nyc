@@ -1,0 +1,53 @@
+{
+  "census_year": 2015,
+  "total_trees": 652173,
+  "alive_trees": 652173,
+  "dbh_statistics": {
+    "mean": 11.70948505994575,
+    "median": 10.0,
+    "std": 8.634238866358409,
+    "min": 0.0,
+    "max": 425.0,
+    "percentiles": {
+      "25th": 5.0,
+      "50th": 10.0,
+      "75th": 16.0,
+      "90th": 24.0
+    }
+  },
+  "baseline_impacts_sample": {
+    "years_projected": 0,
+    "tree_count": 1000,
+    "predicted_tree_count": 1000,
+    "tree_mortality": 0,
+    "avg_current_dbh_cm": 11.592,
+    "avg_predicted_dbh_cm": 11.592,
+    "total_impacts": {
+      "co2_sequestration": {
+        "annual_kg_per_year": 11289.542514379322,
+        "annual_metric_tons_per_year": 11.289542514379322,
+        "cumulative_kg": 0.0,
+        "cumulative_metric_tons": 0.0
+      },
+      "temperature_reduction": {
+        "annual_f": 30.165,
+        "cumulative_degree_days": 0.0
+      },
+      "pm25_reduction": {
+        "annual_lbs_per_year": 93.34486231457409,
+        "cumulative_lbs": 0.0
+      }
+    }
+  },
+  "model_parameters": {
+    "growth_rates": {
+      "young": 1.5,
+      "medium": 1.0,
+      "mature": 0.5
+    },
+    "mortality_rate": 0.02,
+    "base_co2_rate_kg_per_year": 21.77,
+    "base_temp_reduction_f": 0.06,
+    "base_pm25_rate_lbs_per_year": 0.18
+  }
+}

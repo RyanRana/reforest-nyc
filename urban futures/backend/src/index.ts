@@ -3,6 +3,7 @@ import cors from 'cors';
 import { H3Service } from './services/h3Service';
 import { SimulationService } from './services/simulationService';
 import { CongressionalService } from './services/congressionalService';
+import { PredictionService } from './services/predictionService';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -13,6 +14,7 @@ app.use(express.json());
 const h3Service = new H3Service();
 const simulationService = new SimulationService();
 const congressionalService = new CongressionalService();
+const predictionService = new PredictionService();
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -26,7 +28,8 @@ app.get('/', (req, res) => {
       all_h3: '/h3-cells',
       h3_boundaries: '/h3-boundaries',
       simulate: '/simulate?lat=...&lon=...',
-      trees: '/trees?bbox=...'
+      trees: '/trees?bbox=...',
+      predict: '/predict?h3_cell=...&years=...'
     },
     status: 'running'
   });
@@ -174,6 +177,32 @@ app.get('/zipcodes', async (req, res) => {
   } catch (error) {
     console.error('Error loading ZIP codes:', error);
     res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Forward prediction endpoint
+app.get('/predict', async (req, res) => {
+  try {
+    const h3_cell = req.query.h3_cell as string;
+    const zipcode = req.query.zipcode as string;
+    const years = parseInt(req.query.years as string) || 10;
+    const tree_count = req.query.tree_count ? parseInt(req.query.tree_count as string) : undefined;
+    
+    if (!h3_cell && !zipcode) {
+      return res.status(400).json({ error: 'Must provide either h3_cell or zipcode' });
+    }
+    
+    const prediction = await predictionService.predictForward({
+      h3_cell,
+      zipcode,
+      years,
+      tree_count
+    });
+    
+    res.json(prediction);
+  } catch (error: any) {
+    console.error('Error running prediction:', error);
+    res.status(500).json({ error: 'Internal server error', message: error.message });
   }
 });
 

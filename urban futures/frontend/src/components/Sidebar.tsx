@@ -70,6 +70,8 @@ interface H3Data {
   recommended_tree_count: number;
   projected_temp_reduction_F: number;
   projected_pm25_reduction_lbs_per_year: number;
+  projected_co2_reduction_kg_per_year?: number;
+  current_co2_reduction_kg_per_year?: number;
   priority_final: number;
   ej_score: number;
   tree_count?: number;
@@ -112,43 +114,38 @@ const buildShareUrl = (h3Data: H3Data) => {
 
 const Sidebar: React.FC<SidebarProps> = ({ h3Data, loading, onClose }) => {
   const [expandedExplanations, setExpandedExplanations] = useState<Set<string>>(new Set());
-  const [treeCount, setTreeCount] = useState<number>(h3Data?.recommended_tree_count ?? 0);
+  const [prediction, setPrediction] = useState<any>(null);
+  const [predictionLoading, setPredictionLoading] = useState(false);
+  const [predictionYears, setPredictionYears] = useState(10);
+  const [treesToPlant, setTreesToPlant] = useState(0); // New trees to plant now
   
-  // Update tree count when h3Data changes
+  // Fetch prediction when h3Data, years, or treesToPlant changes
+  // Use debouncing to avoid too many API calls
   useEffect(() => {
-    if (h3Data?.recommended_tree_count) {
-      setTreeCount(h3Data.recommended_tree_count);
-    }
-  }, [h3Data?.recommended_tree_count]);
+    if (!h3Data?.h3_cell) return;
+    
+    setPredictionLoading(true);
+    const apiUrl = process.env.REACT_APP_API_URL || 'http://localhost:3001';
+    const currentTreeCount = (h3Data.tree_count || 0);
+    const totalTreeCount = currentTreeCount + treesToPlant;
+    
+    // Debounce: wait 300ms after user stops changing sliders
+    const timeoutId = setTimeout(() => {
+      fetch(`${apiUrl}/predict?h3_cell=${h3Data.h3_cell}&years=${predictionYears}&tree_count=${totalTreeCount}`)
+        .then(res => res.json())
+        .then(data => {
+          setPrediction(data);
+          setPredictionLoading(false);
+        })
+        .catch(err => {
+          console.error('Error fetching prediction:', err);
+          setPredictionLoading(false);
+        });
+    }, 300);
+    
+    return () => clearTimeout(timeoutId);
+  }, [h3Data?.h3_cell, predictionYears, treesToPlant]);
   
-  // Improved temperature reduction calculation
-  // Better algorithm: 0.06°F per tree (3x improvement) with diminishing returns for very high counts
-  const calculateTempReduction = (trees: number): number => {
-    if (trees <= 0) return 0;
-    // Base cooling: 0.06°F per tree
-    // Diminishing returns: log scale for very high tree counts
-    const baseCooling = trees * 0.06;
-    // Apply diminishing returns for counts > 500
-    if (trees > 500) {
-      const excess = trees - 500;
-      const diminishingFactor = 1 - (excess / (excess + 1000));
-      return baseCooling * (0.7 + 0.3 * diminishingFactor);
-    }
-    return baseCooling;
-  };
-  
-  // PM2.5 reduction calculation (improved)
-  const calculatePM25Reduction = (trees: number): number => {
-    if (trees <= 0) return 0;
-    // Base: 0.18 lbs per tree per year (slightly improved)
-    return trees * 0.18;
-  };
-  
-  const recommendedTrees = h3Data?.recommended_tree_count ?? 0;
-  const minTrees = recommendedTrees > 0 ? Math.max(0, Math.floor(recommendedTrees * 0.1)) : 0;
-  const maxTrees = recommendedTrees > 0 ? Math.ceil(recommendedTrees * 3) : 1000;
-  const currentTempReduction = calculateTempReduction(treeCount);
-  const currentPM25Reduction = calculatePM25Reduction(treeCount);
 
   const toggleExplanation = (metricId: string) => {
     const newExpanded = new Set(expandedExplanations);
@@ -276,235 +273,163 @@ const Sidebar: React.FC<SidebarProps> = ({ h3Data, loading, onClose }) => {
           <GreenInitiativesSection zipcode={h3Data.features.zipcode || ''} h3Cell={h3Data.h3_cell} />
         )}
 
-        <div className="ej-indicator">
-          <div className="ej-header">
-            <div className="ej-label">Environmental Justice Score</div>
-            <button
-              className="explanation-toggle"
-              onClick={() => toggleExplanation('ej')}
-              aria-label="Toggle explanation"
-            >
-              {expandedExplanations.has('ej') ? '−' : '+'}
-            </button>
-          </div>
-          <div className="ej-value">{(h3Data.ej_score ?? 0).toFixed(3)}</div>
-          <div className="ej-bar">
-            <div
-              className="ej-bar-fill"
-              style={{ width: `${(h3Data.ej_score ?? 0) * 100}%` }}
-            />
-          </div>
-          <div className={`explanation-dropdown ${expandedExplanations.has('ej') ? 'expanded' : ''}`}>
-            <div className="explanation-text">
-              <strong>How it's calculated:</strong> Weighted combination of multiple vulnerability indicators:
-              <ul style={{ marginTop: '0.5rem', marginBottom: '0.5rem', paddingLeft: '1.5rem' }}>
-                <li><strong>Equity Score (40%):</strong> Comprehensive measure including income vulnerability, minority population percentage, linguistic isolation, and housing burden from U.S. Census data</li>
-                <li><strong>Indoor Environmental Complaints (30%):</strong> Proxy for housing and environmental burden from NYC 311 complaints</li>
-                <li><strong>Heat Vulnerability Index (30%):</strong> Health and infrastructure vulnerability from NYC Department of Health</li>
-                <li><strong>Population Density (10%):</strong> Number of people affected in the area</li>
-              </ul>
-              Normalized 0-1 scale where higher scores indicate greater environmental justice concerns.
-              <br/><br/>
-              <strong>Why it matters:</strong> EJ areas often bear disproportionate environmental burdens (heat, pollution) while having fewer resources to adapt. Tree planting in these areas provides greater community benefit.
-              <br/><br/>
-              <strong>Data sources:</strong> U.S. Census Bureau demographic data, NYC Community Health Survey, NYC 311 complaints, and local environmental monitoring.
-              <br/><br/>
-              <strong>Threshold:</strong> Areas with scores {'>'} 0.6 are designated as "High EJ Priority" and receive additional weighting in priority calculations.
+        {/* EJ Score and Priority Score on same line */}
+        <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+          <div className="metric-card" style={{ flex: '1', minWidth: 0 }}>
+            <div className="metric-header">
+              <div className="metric-label">Environmental Justice Score</div>
             </div>
-          </div>
-          {(h3Data.ej_score ?? 0) > 0.6 && (
-            <div className="ej-highlight">
-              <AlertIcon />
-              <span>High EJ Priority Area</span>
+            <div className="metric-value large">{(h3Data.ej_score ?? 0).toFixed(3)}</div>
+            <div className="metric-bar">
+              <div
+                className="metric-bar-fill"
+                style={{ width: `${(h3Data.ej_score ?? 0) * 100}%` }}
+              />
             </div>
-          )}
-        </div>
-
-        <div className="metric-card" style={{ marginTop: '2rem' }}>
-          <div className="metric-header">
-            <div className="metric-label">Priority Score</div>
-            <button
-              className="explanation-toggle"
-              onClick={() => toggleExplanation('priority')}
-              aria-label="Toggle explanation"
-            >
-              {expandedExplanations.has('priority') ? '−' : '+'}
-            </button>
-          </div>
-          <div className="metric-value large">{(h3Data.priority_final ?? 0).toFixed(3)}</div>
-          <div className="metric-bar">
-            <div
-              className="metric-bar-fill"
-              style={{ width: `${(h3Data.priority_final ?? 0) * 100}%` }}
-            />
-          </div>
-          <div className={`explanation-dropdown ${expandedExplanations.has('priority') ? 'expanded' : ''}`}>
-            <div className="explanation-text">
-              <strong>How it's calculated:</strong> Combines heat vulnerability (40%), air quality (30%), tree coverage gap (20%), and environmental justice weighting (10%). Higher scores indicate greater need for tree planting interventions.
-              <br/><br/>
-              <strong>Data sources:</strong> NYC heat vulnerability index, EPA air quality monitoring, street tree census, and demographic equity metrics.
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-label">Impact per Dollar</div>
-            <button
-              className="explanation-toggle"
-              onClick={() => toggleExplanation('impact-dollar')}
-              aria-label="Toggle explanation"
-            >
-              {expandedExplanations.has('impact-dollar') ? '−' : '+'}
-            </button>
-          </div>
-          <div className="metric-value">{(h3Data.impact_per_dollar ?? 0).toFixed(2)}</div>
-          <div className={`explanation-dropdown ${expandedExplanations.has('impact-dollar') ? 'expanded' : ''}`}>
-            <div className="explanation-text">
-              <strong>How it's calculated:</strong> Uses machine learning to predict climate impact per dollar spent on tree planting. Trained on historical tree planting data, urban heat island measurements, and air quality improvements.
-              <br/><br/>
-              <strong>What it means:</strong> Higher values indicate more efficient use of tree planting funds. Considers long-term cooling effects, air quality improvements, and maintenance costs.
-              <br/><br/>
-              <strong>Methodology:</strong> Random Forest regression model using 12+ environmental and socioeconomic features.
-            </div>
-          </div>
-        </div>
-
-        <div className="metric-card">
-          <div className="metric-header">
-            <div className="metric-label">Recommended Trees</div>
-            <button
-              className="explanation-toggle"
-              onClick={() => toggleExplanation('trees')}
-              aria-label="Toggle explanation"
-            >
-              {expandedExplanations.has('trees') ? '−' : '+'}
-            </button>
-          </div>
-          <div className="metric-value-container">
-            <span className="metric-value">{treeCount.toLocaleString()}</span>
-            {treeCount !== recommendedTrees && (
-              <button 
-                className="reset-icon-btn"
-                onClick={() => setTreeCount(recommendedTrees)}
-                aria-label="Reset to recommended"
-                title="Reset to recommended"
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path>
-                  <path d="M21 3v5h-5"></path>
-                  <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path>
-                  <path d="M3 21v-5h5"></path>
-                </svg>
-              </button>
+            {(h3Data.ej_score ?? 0) > 0.6 && (
+              <div className="ej-highlight" style={{ marginTop: '0.75rem' }}>
+                <AlertIcon />
+                <span>High EJ Priority Area</span>
+              </div>
             )}
           </div>
-          
-          {/* Tree Count Slider */}
-          <div className="tree-slider-container">
-            <div className="slider-labels">
-              <span className="slider-label-min">{minTrees.toLocaleString()}</span>
-              <span className="slider-label-max">{maxTrees.toLocaleString()}</span>
+
+          <div className="metric-card" style={{ flex: '1', minWidth: 0 }}>
+            <div className="metric-header">
+              <div className="metric-label">Priority Score</div>
             </div>
-            <input
-              type="range"
-              min={minTrees}
-              max={maxTrees}
-              value={treeCount}
-              onChange={(e) => setTreeCount(Number(e.target.value))}
-              className="tree-count-slider"
-              step={maxTrees > minTrees ? Math.max(1, Math.floor((maxTrees - minTrees) / 100)) : 1}
-            />
-          </div>
-          
-          <div className={`explanation-dropdown ${expandedExplanations.has('trees') ? 'expanded' : ''}`}>
-            <div className="explanation-text">
-              <strong>How it's calculated:</strong> Priority score × 100 + tree coverage gap × 50. Tree coverage gap measures how far this area is from optimal tree density (normalized 0-1 scale).
-              <br/><br/>
-              <strong>What it represents:</strong> Estimated number of additional trees needed to achieve optimal urban forest coverage. Considers existing tree density, heat vulnerability, and air quality needs.
-              <br/><br/>
-              <strong>Planning considerations:</strong> Accounts for available planting space, soil conditions, and long-term maintenance requirements.
-              <br/><br/>
-              <strong>Adjust the slider</strong> to see how different tree counts affect projected climate impacts.
+            <div className="metric-value large">{(h3Data.priority_final ?? 0).toFixed(3)}</div>
+            <div className="metric-bar">
+              <div
+                className="metric-bar-fill"
+                style={{ width: `${(h3Data.priority_final ?? 0) * 100}%` }}
+              />
             </div>
           </div>
         </div>
 
-        <div className="impact-section">
-          <div className="section-header">
-            <h3>Projected Impacts</h3>
-            <button
-              className="explanation-toggle"
-              onClick={() => toggleExplanation('impacts')}
-              aria-label="Toggle section explanation"
-            >
-              {expandedExplanations.has('impacts') ? '−' : '+'}
-            </button>
-          </div>
-          <div className={`section-explanation ${expandedExplanations.has('impacts') ? 'expanded' : ''}`}>
-            <div className="explanation-text">
-              <strong>Annual climate benefits</strong> from recommended tree planting over a 30-year lifespan. Based on peer-reviewed urban forestry research and local NYC climate data.
+        {/* Forward Projection Section */}
+        {h3Data && (
+          <div className="impact-section" style={{ marginTop: '2rem' }}>
+            <div className="review-header">
+              <div className="review-header-top">
+                <h3>Future Predictions</h3>
+              </div>
             </div>
-          </div>
 
-          <div className="impact-card">
-            <div className="impact-icon">
-              <ThermometerIcon />
-            </div>
-            <div className="impact-content">
-              <div className="impact-header">
-                <div className="impact-label">Temperature Reduction</div>
-                <button
-                  className="explanation-toggle small"
-                  onClick={() => toggleExplanation('temp')}
-                  aria-label="Toggle explanation"
-                >
-                  {expandedExplanations.has('temp') ? '−' : '+'}
-                </button>
+            {/* New Trees to Plant */}
+            <div className="metric-card" style={{ marginBottom: '1rem' }}>
+              <div className="metric-header">
+                <div className="metric-label">New Trees to Plant</div>
               </div>
-              <div className="impact-value">{currentTempReduction.toFixed(2)}°F</div>
-              <div className={`explanation-dropdown ${expandedExplanations.has('temp') ? 'expanded' : ''}`}>
-                <div className="explanation-text">
-                  <strong>How calculated:</strong> {treeCount.toLocaleString()} trees × 0.06°F average cooling per tree (improved algorithm with mature canopy effects).
-                  <br/><br/>
-                  <strong>Science basis:</strong> Urban trees reduce heat island effect through evapotranspiration and shade. Improved algorithm accounts for canopy coverage, tree maturity, and local climate conditions. Research shows mature urban trees provide 0.05-0.08°F local cooling per tree.
-                  <br/><br/>
-                  <strong>Timeframe:</strong> Full cooling benefits achieved after 10-15 years of tree growth. Algorithm includes diminishing returns for very high tree densities.
+              <div className="metric-value">{treesToPlant.toLocaleString()}</div>
+              <div className="tree-slider-container">
+                <div style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '0.5rem', textAlign: 'center' }}>
+                  Recommended: {(h3Data.recommended_tree_count || 0).toLocaleString()} trees
                 </div>
+                <div className="slider-labels">
+                  <span className="slider-label-min">0</span>
+                  <span className="slider-label-max">{Math.max(200, (h3Data.recommended_tree_count || 0) * 2).toLocaleString()}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={Math.max(200, (h3Data.recommended_tree_count || 0) * 2)}
+                  value={treesToPlant}
+                  onChange={(e) => setTreesToPlant(Number(e.target.value))}
+                  className="tree-count-slider"
+                  step={Math.max(1, Math.floor((Math.max(200, (h3Data.recommended_tree_count || 0) * 2)) / 100))}
+                />
               </div>
             </div>
-          </div>
 
-          <div className="impact-card">
-            <div className="impact-icon">
-              <WindIcon />
-            </div>
-            <div className="impact-content">
-              <div className="impact-header">
-                <div className="impact-label">PM2.5 Reduction</div>
-                <button
-                  className="explanation-toggle small"
-                  onClick={() => toggleExplanation('pm25')}
-                  aria-label="Toggle explanation"
-                >
-                  {expandedExplanations.has('pm25') ? '−' : '+'}
-                </button>
+            {/* Years Ahead */}
+            <div className="metric-card" style={{ marginBottom: '1rem' }}>
+              <div className="metric-header">
+                <div className="metric-label">Years Ahead</div>
               </div>
-              <div className="impact-value">
-                {currentPM25Reduction.toFixed(2)} lbs/year
-              </div>
-              <div className={`explanation-dropdown ${expandedExplanations.has('pm25') ? 'expanded' : ''}`}>
-                <div className="explanation-text">
-                  <strong>How calculated:</strong> {treeCount.toLocaleString()} trees × 0.18 lbs PM2.5 removed per year per tree (improved estimate).
-                  <br/><br/>
-                  <strong>Science basis:</strong> Tree leaves and bark capture airborne particulate matter. Research from USDA Forest Service shows urban trees remove 0.16-0.20 lbs PM2.5 annually, with improved algorithm accounting for leaf surface area and tree health.
-                  <br/><br/>
-                  <strong>Health impact:</strong> PM2.5 reduction improves respiratory health and reduces cardiovascular disease risk.
+              <div className="metric-value">{predictionYears}</div>
+              <div className="tree-slider-container">
+                <div className="slider-labels">
+                  <span className="slider-label-min">5</span>
+                  <span className="slider-label-max">30</span>
                 </div>
+                <input
+                  type="range"
+                  min={5}
+                  max={30}
+                  step={5}
+                  value={predictionYears}
+                  onChange={(e) => setPredictionYears(Number(e.target.value))}
+                  className="tree-count-slider"
+                />
               </div>
             </div>
+
+            {predictionLoading ? (
+              <div style={{ padding: '1rem', textAlign: 'center', color: '#888' }}>Loading prediction...</div>
+            ) : prediction && prediction.summary && prediction.current_state && prediction.yearly_projections ? (
+              <>
+                {/* CO₂ Sequestration */}
+                <div className="impact-card" style={{ marginBottom: '1rem' }}>
+                  <div className="impact-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ width: '24px', height: '24px' }}>
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <path d="M12 2v4"></path>
+                      <path d="M12 18v4"></path>
+                      <path d="M4.93 4.93l2.83 2.83"></path>
+                      <path d="M16.24 16.24l2.83 2.83"></path>
+                      <path d="M2 12h4"></path>
+                      <path d="M18 12h4"></path>
+                      <path d="M4.93 19.07l2.83-2.83"></path>
+                      <path d="M16.24 7.76l2.83-2.83"></path>
+                    </svg>
+                  </div>
+                  <div className="impact-content">
+                    <div className="impact-label">CO₂ Sequestration Over Time</div>
+                    <div className="impact-value">
+                      {(prediction.summary.total_co2_sequestered_metric_tons || 0).toFixed(1)} metric tons
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.25rem' }}>
+                      Total over {predictionYears} years
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Now: {((prediction.current_state.co2_sequestration_kg_per_year || 0) / 1000).toFixed(2)}t/year</span>
+                      <span>→</span>
+                      <span>In {predictionYears} years: {((prediction.yearly_projections[prediction.yearly_projections.length - 1]?.co2_sequestration_kg_per_year || 0) / 1000).toFixed(2)}t/year</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Temperature Reduction */}
+                <div className="impact-card" style={{ marginBottom: '1rem' }}>
+                  <div className="impact-icon">
+                    <ThermometerIcon />
+                  </div>
+                  <div className="impact-content">
+                    <div className="impact-label">Temperature Reduction Over Time</div>
+                    <div className="impact-value">
+                      {(prediction.summary.avg_temperature_reduction_f || 0).toFixed(2)}°F
+                    </div>
+                    <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.25rem' }}>
+                      Average over {predictionYears} years
+                    </div>
+                    <div style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Now: {(prediction.current_state.temperature_reduction_f || 0).toFixed(2)}°F</span>
+                      <span>→</span>
+                      <span>In {predictionYears} years: {(prediction.yearly_projections[prediction.yearly_projections.length - 1]?.temperature_reduction_f || 0).toFixed(2)}°F</span>
+                    </div>
+                  </div>
+                </div>
+
+              </>
+            ) : prediction ? (
+              <div style={{ padding: '1rem', textAlign: 'center', color: '#ff6b6b' }}>
+                Error: Invalid prediction data. Please try again.
+              </div>
+            ) : null}
           </div>
-        </div>
+        )}
 
         {/* Tree Breakdown Section */}
         <div className="impact-section">

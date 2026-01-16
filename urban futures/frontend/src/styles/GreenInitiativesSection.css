@@ -188,9 +188,9 @@
 /* Initiatives Grid */
 .initiatives-grid {
   position: relative;
-  min-height: 350px;
-  padding-bottom: 3rem;
-  padding-top: 1rem;
+  min-height: 200px;
+  padding-bottom: 1rem;
+  padding-top: 0.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -198,20 +198,21 @@
 
 .no-initiatives {
   text-align: center;
-  padding: 3rem 1rem;
+  padding: 0.5rem 0.5rem;
   color: #999;
   grid-column: 1 / -1;
 }
 
 .empty-icon {
-  font-size: 4rem;
+  font-size: 2rem;
   display: block;
-  margin-bottom: 1rem;
+  margin-bottom: 0.25rem;
 }
 
 .no-initiatives p {
-  font-size: 1rem;
+  font-size: 0.85rem;
   font-style: italic;
+  margin: 0;
 }
 
 /* Initiative Card */

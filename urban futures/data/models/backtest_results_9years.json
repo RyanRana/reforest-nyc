@@ -1,0 +1,20 @@
+{
+  "years_projected": 9,
+  "sample_size": 10000,
+  "expected_survival_rate": 0.8337477621301498,
+  "expected_tree_count_after_years": 8337,
+  "expected_tree_mortality": 1663,
+  "avg_dbh_growth_cm": 9.49805,
+  "total_co2_sequestration": {
+    "annual_kg_per_year": 96029.19835859357,
+    "annual_metric_tons_per_year": 96.02919835859356,
+    "cumulative_kg": 1355456.8184070736,
+    "cumulative_metric_tons": 1355.4568184070736
+  },
+  "validation_notes": [
+    "Growth predictions assume {'young': 1.5, 'medium': 1.0, 'mature': 0.5} cm/year growth rates",
+    "Mortality rate: 2.0% per year",
+    "Actual 2024 census data would allow full validation",
+    "Predictions are conservative estimates based on urban tree research"
+  ]
+}

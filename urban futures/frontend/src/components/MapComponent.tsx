@@ -30,7 +30,7 @@ const safeGetLayer = (mapInstance: mapboxgl.Map, layerId: string): any => {
   }
 };
 
-const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: string) => void, geojson: any) => {
+const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: string) => void, geojson: any, viewMode: 'trees' | 'heat' = 'trees') => {
   console.log('🎨 ===== addH3GradientLayer CALLED =====');
   console.log('   Features count:', geojson.features?.length || 0);
   console.log('   Map instance valid:', !!mapInstance && typeof mapInstance.getSource === 'function');
@@ -44,6 +44,10 @@ const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: strin
     if (safeGetLayer(mapInstance, 'h3-gradient')) {
       mapInstance.removeLayer('h3-gradient');
     }
+    // DON'T remove thermal-heat-overlay - it's managed separately
+    // if (safeGetLayer(mapInstance, 'thermal-heat-overlay')) {
+    //   mapInstance.removeLayer('thermal-heat-overlay');
+    // }
     if (safeGetLayer(mapInstance, 'h3-layer')) {
       // Removing the layer automatically removes all its event handlers
       mapInstance.removeLayer('h3-layer');
@@ -110,49 +114,79 @@ const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: strin
           console.warn('Could not determine layer order, adding at end');
         }
         
+        // Determine fill color based on view mode
+        // Trees mode: green gradient based on priority_final (tree gap)
+        // Heat mode: red gradient based on thermal value (heat index)
+        let fillColorExpression: any;
+        
+        if (viewMode === 'trees') {
+          // Green gradient for tree priority (current behavior)
+          fillColorExpression = [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', 'priority_final'], 0],
+            0, '#e8f5e9',      // Very light green - low priority
+            0.1, '#c8e6c9',    // Light green
+            0.2, '#a5d6a7',    // Light-medium green
+            0.3, '#81c784',    // Medium green
+            0.4, '#66bb6a',    // Medium-dark green
+            0.5, '#4caf50',    // Dark green
+            0.6, '#388e3c',    // Darker green
+            0.7, '#2e7d32',    // Very dark green
+            0.8, '#1b5e20',    // Darkest green
+            1.0, '#0d4f1c'     // Nearly black green - maximum priority
+          ];
+        } else {
+          // Red gradient for heat index
+          // Use thermal_value which matches the thermal points calculation
+          fillColorExpression = [
+            'interpolate',
+            ['linear'],
+            [
+              'coalesce',
+              ['get', 'thermal_value'], // Use the same thermal value as thermal points
+              ['get', 'earth2_temp_c'],
+              ['get', 'heat_vulnerability_index'],
+              ['get', 'heat_score'],
+              ['get', 'thermal_proxy_normalized'], // Fallback to thermal proxy
+              0.5 // Final fallback
+            ],
+            0, '#fff5f5',      // Very light pink - cool
+            0.1, '#ffe5e5',    // Light pink
+            0.2, '#ffcccc',    // Light-medium pink
+            0.3, '#ffb3b3',    // Medium-light pink
+            0.4, '#ff9999',    // Medium pink
+            0.5, '#ff8080',    // Medium-dark pink
+            0.6, '#ff6666',    // Dark pink
+            0.7, '#ff4d4d',    // Dark red-pink
+            0.8, '#ff3333',    // Dark red
+            0.9, '#cc0000',    // Darker red
+            1.0, '#990000'     // Darkest red - hottest
+          ];
+        }
+        
         const layerConfig: any = {
           id: 'h3-layer',
-    type: 'fill',
+          type: 'fill',
           source: 'h3-cells',
           layout: {
             visibility: 'visible'
           },
-    paint: {
-            // Color based on priority_final score (0-1 scale)
-            // Higher priority = darker green (more urgent tree planting needed)
-            'fill-color': [
-              'interpolate',
-              ['linear'],
-              ['coalesce', ['get', 'priority_final'], 0],
-              0,
-              '#e8f5e9',      // Very light green - low priority
-              0.1,
-              '#c8e6c9',      // Light green - low-medium priority
-              0.2,
-              '#a5d6a7',      // Light-medium green
-              0.3,
-              '#81c784',      // Medium green
-              0.4,
-              '#66bb6a',      // Medium-dark green
-              0.5,
-              '#4caf50',      // Dark green - medium-high priority
-              0.6,
-              '#388e3c',      // Darker green - high priority
-              0.7,
-              '#2e7d32',      // Very dark green - very high priority
-              0.8,
-              '#1b5e20',      // Darkest green - highest priority
-              1.0,
-              '#0d4f1c'       // Nearly black green - maximum priority
-            ],
-            'fill-opacity': 0.85, // High opacity for good visibility
+          paint: {
+            'fill-color': fillColorExpression,
+            'fill-opacity': 0.85, // Full opacity for clear visibility
             'fill-antialias': true
           }
         };
         
+        // Add H3 layer AFTER thermal overlay (so it's on top and clickable)
+        // If thermal overlay exists, add H3 layer after it (by not specifying beforeId)
+        // If thermal overlay doesn't exist, just add normally
         if (beforeId) {
-          mapInstance.addLayer(layerConfig, beforeId);
+          // Thermal overlay exists - add H3 layer AFTER it (on top)
+          mapInstance.addLayer(layerConfig);
         } else {
+          // No thermal overlay - add normally
           mapInstance.addLayer(layerConfig);
         }
         
@@ -173,6 +207,9 @@ const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: strin
         console.log('   Layer opacity:', opacity);
         console.log('   Fill color:', fillColor);
         
+        // Thermal overlay will be added separately when source is ready
+        // This ensures proper layer ordering (thermal below H3 cells)
+        
         // Check if layer is in the style
         const style = mapInstance.getStyle();
         const layerInStyle = style.layers?.find((l: any) => l.id === 'h3-layer');
@@ -188,6 +225,7 @@ const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: strin
       }
 
       // Add click handler AFTER layer is added
+      // Make sure thermal overlay doesn't block clicks by ensuring it's non-interactive
       mapInstance.on('click', 'h3-layer', (e) => {
         if (e.features && e.features[0]) {
           const h3Cell = e.features[0].properties?.h3_cell;
@@ -197,6 +235,11 @@ const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: strin
           }
         }
       });
+      
+      // Ensure thermal overlay is non-interactive (doesn't block clicks)
+      if (safeGetLayer(mapInstance, 'thermal-heat-overlay')) {
+        mapInstance.setFilter('thermal-heat-overlay', null); // No filter needed, just ensure it's non-interactive
+      }
 
       // Cursor handlers
       mapInstance.on('mouseenter', 'h3-layer', () => {
@@ -210,6 +253,44 @@ const addH3GradientLayer = (mapInstance: mapboxgl.Map, onH3Click: (h3Cell: strin
       mapInstance.triggerRepaint();
       
       console.log('✅ Click handlers attached, triggering repaint');
+      
+      // Ensure thermal overlay is on top after H3 layer is added
+      try {
+        const thermalSource = mapInstance.getSource('thermal-heat-points');
+        if (thermalSource) {
+          console.log('🔥 Re-ensuring thermal overlay is on top after H3 layer setup');
+          const ensureThermalOnTop = () => {
+            if (!mapInstance) return;
+            
+            const thermalLayer = safeGetLayer(mapInstance, 'thermal-heat-overlay');
+            if (!thermalLayer) {
+              console.log('🔥 Thermal layer not found, will be added separately');
+              return;
+            }
+            
+            // Get all layer IDs to find the last one
+            try {
+              const style = mapInstance.getStyle();
+              const layers = style.layers || [];
+              if (layers.length > 0) {
+                const lastLayerId = layers[layers.length - 1].id;
+                // Only move if it's not already last
+                if (lastLayerId !== 'thermal-heat-overlay') {
+                  mapInstance.moveLayer('thermal-heat-overlay');
+                  console.log('✅ Moved thermal overlay to top (after all layers)');
+                } else {
+                  console.log('✅ Thermal overlay already on top');
+                }
+              }
+            } catch (e) {
+              console.warn('Could not move thermal layer:', e);
+            }
+          };
+          setTimeout(ensureThermalOnTop, 200);
+        }
+      } catch (e) {
+        // Source might not be ready yet
+      }
       
       // IMMEDIATE verification first
       try {
@@ -516,7 +597,216 @@ const MapComponent: React.FC<MapComponentProps> = ({ onH3Click, selectedH3 }) =>
   const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<mapboxgl.Map | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [viewMode, setViewMode] = useState<'trees' | 'heat'>('trees'); // Toggle between trees (green) and heat (red)
   const mapStyle = 'mapbox://styles/mapbox/light-v11'; // Fixed light style for better hexagon visibility
+
+  // Helper function to safely get a source (prevents errors when style isn't loaded)
+  const safeGetSource = (mapInstance: mapboxgl.Map, sourceId: string): any => {
+    try {
+      // Check if map style is loaded
+      if (!mapInstance || !mapInstance.getStyle) {
+        return null;
+      }
+      const style = mapInstance.getStyle();
+      if (!style || !style.sources) {
+        return null;
+      }
+      // Now safe to call getSource
+      return mapInstance.getSource(sourceId);
+    } catch (e) {
+      // Silently fail if style isn't ready
+      return null;
+    }
+  };
+
+  // Helper function to ensure thermal overlay layer is added
+  const ensureThermalOverlay = (mapInstance: mapboxgl.Map) => {
+    if (!mapInstance) {
+      console.warn('⚠️ ensureThermalOverlay: mapInstance is null');
+      return;
+    }
+    
+    // Check if style is loaded first
+    try {
+      const style = mapInstance.getStyle();
+      if (!style || !style.layers) {
+        console.log('⏳ Map style not ready yet, will retry...');
+        return;
+      }
+    } catch (e) {
+      console.log('⏳ Map style check failed, will retry...');
+      return;
+    }
+    
+    const source = safeGetSource(mapInstance, 'thermal-heat-points') as mapboxgl.GeoJSONSource;
+    if (!source) {
+      console.log('⏳ Thermal source not ready yet, will retry...');
+      return;
+    }
+    
+    // Debug: Check if source has data and is loaded
+    if (!source.loaded()) {
+      console.log('⏳ Thermal source not loaded yet, waiting...');
+      // Wait for source to load
+      try {
+        mapInstance.once('sourcedata', (e: any) => {
+          if (e.sourceId === 'thermal-heat-points' && e.isSourceLoaded) {
+            setTimeout(() => ensureThermalOverlay(mapInstance), 100);
+          }
+        });
+      } catch (e) {
+        console.warn('Could not wait for source load:', e);
+      }
+      return;
+    }
+    
+    const sourceData = (source as any)._data;
+    const featureCount = sourceData?.features?.length || 0;
+    console.log(`🔥 ensureThermalOverlay: Source has ${featureCount} features`);
+    
+    if (featureCount === 0) {
+      console.warn('⚠️ Thermal source has no features!');
+      return;
+    }
+    
+    // Check if layer already exists
+    if (safeGetLayer(mapInstance, 'thermal-heat-overlay')) {
+      // Just update visibility
+      mapInstance.setLayoutProperty(
+        'thermal-heat-overlay',
+        'visibility',
+        'none' // Always hidden - heat is shown in cells
+      );
+      return;
+    }
+    
+    // Add the layer
+    try {
+      const thermalLayerConfig: any = {
+        id: 'thermal-heat-overlay',
+        type: 'heatmap',
+        source: 'thermal-heat-points',
+        layout: {
+          visibility: 'none' // Always hidden - heat is shown in cells when heat mode is active
+        },
+        paint: {
+          // Weight points by their thermal value (0-1 scale)
+          // Use 'thermal' property or fallback to earth2_temp_normalized
+          'heatmap-weight': [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', 'thermal'], ['get', 'earth2_temp_normalized'], 0.5],
+            0, 0.5,  // Higher minimum weight for better visibility
+            0.3, 0.7,
+            0.6, 0.85,
+            1, 1
+          ],
+          // Intensity of the heatmap (higher = more intense)
+          'heatmap-intensity': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            0, 1.5,
+            10, 2,
+            12, 3,
+            15, 4
+          ],
+          // Color gradient for the heatmap - start showing colors at very low density
+          'heatmap-color': [
+            'interpolate',
+            ['linear'],
+            ['heatmap-density'],
+            0, 'rgba(0, 100, 255, 0)',          // Transparent blue (cool)
+            0.01, 'rgba(100, 150, 255, 0.5)',   // Light blue - visible at low density
+            0.05, 'rgba(150, 200, 255, 0.6)',   // Pale blue
+            0.1, 'rgba(100, 200, 255, 0.7)',    // Sky blue
+            0.3, 'rgba(255, 255, 100, 0.8)',    // Yellow
+            0.5, 'rgba(255, 200, 0, 0.9)',      // Orange-yellow
+            0.7, 'rgba(255, 150, 0, 0.95)',     // Orange
+            0.9, 'rgba(255, 80, 0, 0.98)',      // Red-orange
+            1, 'rgba(255, 0, 0, 1)'             // Red (hot) - fully opaque
+          ],
+          // Radius of influence for each point (larger = more spread)
+          'heatmap-radius': [
+            'interpolate',
+            ['linear'],
+            ['zoom'],
+            0, 30,
+            10, 50,
+            12, 80,
+            15, 120
+          ],
+          // Opacity of the entire heatmap layer (higher = more visible)
+          'heatmap-opacity': 1.0
+        }
+      };
+      
+      // Add thermal layer - ensure it's on top
+      try {
+        // Check if h3-layer exists - if so, add thermal after it
+        const h3Layer = safeGetLayer(mapInstance, 'h3-layer');
+        
+        if (h3Layer) {
+          // H3 layer exists - add thermal layer after it (which puts it on top)
+          mapInstance.addLayer(thermalLayerConfig);
+          console.log('✅ Thermal layer added after h3-layer');
+        } else {
+          // No h3-layer yet - add thermal layer, will move it later
+          mapInstance.addLayer(thermalLayerConfig);
+          console.log('✅ Thermal layer added (h3-layer not present yet)');
+        }
+        
+        // Force move to top to ensure it's visible
+        setTimeout(() => {
+          try {
+            const style = mapInstance.getStyle();
+            const layers = style.layers || [];
+            const thermalIndex = layers.findIndex((l: any) => l.id === 'thermal-heat-overlay');
+            const lastIndex = layers.length - 1;
+            
+            if (thermalIndex >= 0 && thermalIndex < lastIndex) {
+              mapInstance.moveLayer('thermal-heat-overlay');
+              console.log(`✅ Thermal layer moved from position ${thermalIndex} to top (${layers.length - 1})`);
+            }
+          } catch (e) {
+            console.warn('Could not verify/move thermal layer position:', e);
+          }
+        }, 100);
+        
+        // Verify layer was added
+        const addedLayer = safeGetLayer(mapInstance, 'thermal-heat-overlay');
+        if (addedLayer) {
+          const visibility = mapInstance.getLayoutProperty('thermal-heat-overlay', 'visibility');
+          const opacity = mapInstance.getPaintProperty('thermal-heat-overlay', 'heatmap-opacity');
+          const intensity = mapInstance.getPaintProperty('thermal-heat-overlay', 'heatmap-intensity');
+          console.log(`✅ Thermal heat overlay layer added successfully!`);
+          console.log(`   Visibility: ${visibility}`);
+          console.log(`   Opacity: ${opacity}`);
+          console.log(`   Intensity: ${intensity}`);
+          console.log(`   Source features: ${featureCount}`);
+          
+          // Log a sample feature to verify data
+          if (sourceData?.features?.[0]?.properties) {
+            const sampleProps = sourceData.features[0].properties;
+            console.log(`   Sample feature thermal value: ${sampleProps.thermal || sampleProps.earth2_temp_normalized || 'missing'}`);
+          }
+        } else {
+          console.error('❌ Failed to add thermal overlay layer!');
+        }
+      } catch (e: any) {
+        console.error('❌ Error adding thermal overlay:', e);
+        // If layer already exists, just update visibility
+        if (safeGetLayer(mapInstance, 'thermal-heat-overlay')) {
+          mapInstance.setLayoutProperty('thermal-heat-overlay', 'visibility', 'none'); // Always hidden
+          console.log('✅ Thermal overlay already exists, updated visibility');
+        } else {
+          console.error('❌ Layer does not exist and could not be created:', e.message);
+        }
+      }
+    } catch (e) {
+      console.warn('⚠️ Could not add thermal overlay:', e);
+    }
+  };
 
   useEffect(() => {
     // Prevent double initialization (React StrictMode causes double renders)
@@ -692,10 +982,166 @@ const MapComponent: React.FC<MapComponentProps> = ({ onH3Click, selectedH3 }) =>
               .filter((p: any) => p != null && p !== undefined && !isNaN(p) && isFinite(p));
             console.log(`📊 Priority stats: ${prioritiesBefore.length} of ${geojson.features.length} features have priority_final`);
             
+            // Count how many features have heat_vulnerability_index
+            const heatIndices = geojson.features
+              .map((f: any) => f.properties.heat_vulnerability_index)
+              .filter((h: any) => h != null && h !== undefined && !isNaN(h) && isFinite(h));
+            console.log(`🌡️ Heat index stats: ${heatIndices.length} of ${geojson.features.length} features have heat_vulnerability_index`);
+            if (heatIndices.length > 0) {
+              const minHeat = Math.min(...heatIndices);
+              const maxHeat = Math.max(...heatIndices);
+              console.log(`   Heat range: ${minHeat.toFixed(3)} - ${maxHeat.toFixed(3)}`);
+            }
+            
+            // Create point-based GeoJSON for thermal overlay (centroids of H3 cells)
+            // Using NVIDIA Earth-2 thermal region temperature data
+            const thermalPoints: any = {
+              type: 'FeatureCollection',
+              features: []
+            };
+            
+            // First pass: collect all Earth-2 temperatures to find min/max for normalization
+            const earth2Temps = geojson.features
+              .map((f: any) => f.properties.earth2_temp_c)
+              .filter((t: any) => t != null && t !== undefined && !isNaN(t) && isFinite(t));
+            const maxEarth2Temp = earth2Temps.length > 0 ? Math.max(...earth2Temps) : 35; // Default max 35°C (~95°F)
+            const minEarth2Temp = earth2Temps.length > 0 ? Math.min(...earth2Temps) : 0; // Default min 0°C
+            
+            // Collect thermal proxy values (tree gap, inverse tree density, population density, building density)
+            // for normalization when Earth-2 data is missing
+            const thermalProxies: number[] = [];
+            geojson.features.forEach((f: any) => {
+              const props = f.properties;
+              // Create thermal proxy: inverse tree density + population/building density
+              // Low trees + high density = high heat
+              const treeDensity = props.tree_density_per_km2 || 0;
+              const normalizedTreeDensity = maxTreeDensity > minTreeDensity 
+                ? (treeDensity - minTreeDensity) / (maxTreeDensity - minTreeDensity)
+                : 0.5;
+              const treeGap = 1 - Math.max(0, Math.min(1, normalizedTreeDensity)); // Inverse: 0 = many trees, 1 = few trees
+              
+              const popDensity = props.population_density || 0;
+              const buildingDensity = props.building_density || 0.5;
+              
+              // Combine factors: tree gap (60%), population density (25%), building density (15%)
+              const thermalProxy = (treeGap * 0.6) + (Math.min(popDensity / 50000, 1) * 0.25) + (buildingDensity * 0.15);
+              thermalProxies.push(thermalProxy);
+            });
+            
+            const maxThermalProxy = thermalProxies.length > 0 ? Math.max(...thermalProxies) : 1;
+            const minThermalProxy = thermalProxies.length > 0 ? Math.min(...thermalProxies) : 0;
+            
+            console.log(`🌡️ Earth-2 Temperature stats: ${earth2Temps.length} of ${geojson.features.length} features have earth2_temp_c`);
+            if (earth2Temps.length > 0) {
+              console.log(`   Temperature range: ${minEarth2Temp.toFixed(1)}°C - ${maxEarth2Temp.toFixed(1)}°C`);
+              console.log(`   (${((minEarth2Temp * 9/5) + 32).toFixed(1)}°F - ${((maxEarth2Temp * 9/5) + 32).toFixed(1)}°F)`);
+            }
+            if (earth2Temps.length === 0) {
+              console.log(`   Using thermal proxy (tree gap + population/building density) for visualization`);
+              console.log(`   Thermal proxy range: ${minThermalProxy.toFixed(3)} - ${maxThermalProxy.toFixed(3)}`);
+            }
+            
             geojson.features = geojson.features.map((feature: any) => {
               const props = feature.properties;
               if (props.tree_density_per_km2 === null || props.tree_density_per_km2 === undefined) {
                 props.tree_density_per_km2 = props.tree_count || 0;
+              }
+              
+              // Calculate and store thermal proxy for heat index visualization
+              // Low trees + high density = high heat
+              const treeDensity = props.tree_density_per_km2 || 0;
+              const normalizedTreeDensity = maxTreeDensity > minTreeDensity 
+                ? (treeDensity - minTreeDensity) / (maxTreeDensity - minTreeDensity)
+                : 0.5;
+              const treeGap = 1 - Math.max(0, Math.min(1, normalizedTreeDensity)); // Inverse: 0 = many trees, 1 = few trees
+              
+              const popDensity = (props.population_density || 0) / 1000; // Normalize by dividing by 1000
+              const buildingDensity = Math.min(props.building_density || 0.5, 1); // Ensure 0-1 range
+              
+              // Combine factors: tree gap (60%), population density (25%), building density (15%)
+              const popNorm = Math.min(popDensity / 50, 1); // Normalize population (assume max ~50k per km2)
+              const thermalProxy = Math.max(0, Math.min(1, (treeGap * 0.6) + (popNorm * 0.25) + (buildingDensity * 0.15)));
+              
+              // Normalize thermal proxy to 0-1 scale using collected range
+              let normalizedThermal = thermalProxy;
+              if (maxThermalProxy > minThermalProxy && maxThermalProxy > 0) {
+                normalizedThermal = (thermalProxy - minThermalProxy) / (maxThermalProxy - minThermalProxy);
+              }
+              normalizedThermal = Math.max(0, Math.min(1, normalizedThermal)); // Clamp to 0-1
+              
+              // Store normalized thermal proxy in feature properties for heat index mode
+              props.thermal_proxy_normalized = normalizedThermal;
+              
+              // Also calculate the final thermal value (same as used in thermal points)
+              // This will be used for heat index visualization
+              let earth2Temp = props.earth2_temp_c;
+              let usingProxy = false;
+              
+              if (earth2Temp == null || earth2Temp === undefined || isNaN(earth2Temp) || !isFinite(earth2Temp)) {
+                // Use the thermal proxy we just calculated
+                if (maxThermalProxy > minThermalProxy && maxThermalProxy > 0) {
+                  earth2Temp = normalizedThermal;
+                } else {
+                  earth2Temp = thermalProxy; // Use as-is if no range
+                }
+                earth2Temp = Math.max(0, Math.min(1, earth2Temp || 0.5));
+                usingProxy = true;
+              } else {
+                // Normalize Earth-2 temperature to 0-1 scale
+                if (maxEarth2Temp > minEarth2Temp) {
+                  earth2Temp = (earth2Temp - minEarth2Temp) / (maxEarth2Temp - minEarth2Temp);
+                } else {
+                  earth2Temp = 0.5; // Default to middle if no range
+                }
+                earth2Temp = Math.max(0, Math.min(1, earth2Temp || 0.5));
+              }
+              
+              // Final safety check - ensure we always have a valid value
+              if (!isFinite(earth2Temp) || earth2Temp == null) {
+                earth2Temp = 0.5; // Default middle value
+              }
+              
+              // Store the final thermal value (same calculation as thermal points)
+              const thermalValue = Math.max(0.1, Math.min(1, earth2Temp || 0.5));
+              props.thermal_value = thermalValue; // Store for heat index mode
+              
+              // Calculate centroid for thermal overlay point
+              if (feature.geometry && feature.geometry.type === 'Polygon' && feature.geometry.coordinates) {
+                const coords = feature.geometry.coordinates[0]; // First ring
+                let sumLng = 0, sumLat = 0;
+                let count = 0;
+                for (const coord of coords) {
+                  if (coord && coord.length >= 2) {
+                    sumLng += coord[0];
+                    sumLat += coord[1];
+                    count++;
+                  }
+                }
+                if (count > 0) {
+                  const centroid = [sumLng / count, sumLat / count];
+                  
+                  // Use the thermal value we already calculated above (stored in props.thermal_value)
+                  const thermalValue = props.thermal_value;
+                  
+                  thermalPoints.features.push({
+                    type: 'Feature',
+                    geometry: {
+                      type: 'Point',
+                      coordinates: centroid
+                    },
+                    properties: {
+                      // Primary thermal value for heatmap weight
+                      thermal: thermalValue,
+                      // Also store normalized value
+                      earth2_temp_normalized: thermalValue,
+                      // Keep raw values for reference
+                      earth2_temp_c: props.earth2_temp_c || null,
+                      heat_vulnerability_index: props.heat_vulnerability_index || null,
+                      heat_score: props.heat_score || null,
+                      h3_cell: props.h3_cell
+                    }
+                  });
+                }
               }
               
               // Calculate priority_final if it's missing or invalid
@@ -748,6 +1194,27 @@ const MapComponent: React.FC<MapComponentProps> = ({ onH3Click, selectedH3 }) =>
               return feature;
             });
             
+            // Collect all thermal values to find range for final normalization
+            const allThermalValues = geojson.features
+              .map((f: any) => f.properties.thermal_value)
+              .filter((v: any) => v != null && !isNaN(v) && isFinite(v));
+            
+            const minThermalValue = allThermalValues.length > 0 ? Math.min(...allThermalValues) : 0;
+            const maxThermalValue = allThermalValues.length > 0 ? Math.max(...allThermalValues) : 1;
+            
+            console.log(`🔥 Thermal value range before normalization: min=${minThermalValue.toFixed(3)}, max=${maxThermalValue.toFixed(3)}`);
+            
+            // Normalize all thermal values to 0-1 range for better color distribution
+            if (maxThermalValue > minThermalValue && allThermalValues.length > 0) {
+              geojson.features.forEach((feature: any) => {
+                if (feature.properties.thermal_value != null && !isNaN(feature.properties.thermal_value)) {
+                  const normalized = (feature.properties.thermal_value - minThermalValue) / (maxThermalValue - minThermalValue);
+                  feature.properties.thermal_value = Math.max(0, Math.min(1, normalized));
+                }
+              });
+              console.log(`   ✅ Normalized thermal values to 0-1 range`);
+            }
+            
             // Log final priority stats after computation
             const prioritiesAfter = geojson.features
               .map((f: any) => f.properties.priority_final)
@@ -760,6 +1227,34 @@ const MapComponent: React.FC<MapComponentProps> = ({ onH3Click, selectedH3 }) =>
             }
             
             console.log(`📊 Processed ${geojson.features.length} features with valid data`);
+            console.log(`🔥 Thermal points created: ${thermalPoints.features.length} points`);
+            
+            // Log sample thermal values for debugging
+            if (thermalPoints.features.length > 0) {
+              const sampleValues = thermalPoints.features.slice(0, 5).map((f: any) => ({
+                thermal: f.properties.thermal || f.properties.earth2_temp_normalized,
+                h3: f.properties.h3_cell
+              }));
+              console.log(`   Sample thermal values:`, sampleValues);
+              
+              // Also log thermal_value from H3 features
+              const sampleH3ThermalValues = geojson.features.slice(0, 10).map((f: any) => ({
+                thermal_value: f.properties.thermal_value,
+                thermal_proxy_normalized: f.properties.thermal_proxy_normalized,
+                h3: f.properties.h3_cell
+              }));
+              console.log(`   Sample H3 thermal_value properties:`, sampleH3ThermalValues);
+              
+              // Check range of thermal values
+              const thermalValues = geojson.features
+                .map((f: any) => f.properties.thermal_value)
+                .filter((v: any) => v != null && !isNaN(v));
+              if (thermalValues.length > 0) {
+                console.log(`   Thermal value stats: min=${Math.min(...thermalValues).toFixed(3)}, max=${Math.max(...thermalValues).toFixed(3)}, count=${thermalValues.length}`);
+              } else {
+                console.warn(`   ⚠️ No thermal_value properties found in H3 features!`);
+              }
+            }
             
             // Create source WITH data already loaded
             if (!map.current.getSource('h3-cells')) {
@@ -778,8 +1273,68 @@ const MapComponent: React.FC<MapComponentProps> = ({ onH3Click, selectedH3 }) =>
             // Store data FIRST to prevent backup loader from running
             setAllH3Data(geojson);
             
+            // Add thermal overlay source (point-based for smooth blobby effect)
+            // Using NVIDIA Earth-2 thermal region temperature data
+            if (map.current && thermalPoints.features.length > 0) {
+              if (!map.current.getSource('thermal-heat-points')) {
+                map.current.addSource('thermal-heat-points', {
+                  type: 'geojson',
+                  data: thermalPoints
+                });
+                console.log(`✅ Thermal heat points source created: ${thermalPoints.features.length} points`);
+              } else {
+                (map.current.getSource('thermal-heat-points') as mapboxgl.GeoJSONSource).setData(thermalPoints);
+                console.log(`✅ Thermal heat points source updated: ${thermalPoints.features.length} points`);
+              }
+              
+              // Ensure thermal overlay layer is added when source is ready
+              // Wait for h3-layer to be added first, then add thermal on top
+              const thermalSource = map.current.getSource('thermal-heat-points') as mapboxgl.GeoJSONSource;
+              
+              const addThermalWhenReady = () => {
+                if (!map.current) return;
+                
+                // Wait for both source and h3-layer to be ready
+                if (thermalSource.loaded() && safeGetLayer(map.current, 'h3-layer')) {
+                  ensureThermalOverlay(map.current);
+                } else {
+                  // Retry after a delay
+                  setTimeout(() => {
+                    if (map.current && thermalSource.loaded()) {
+                      ensureThermalOverlay(map.current);
+                    }
+                  }, 500);
+                }
+              };
+              
+              if (thermalSource.loaded()) {
+                // Source is ready, but wait for h3-layer
+                if (safeGetLayer(map.current, 'h3-layer')) {
+                  addThermalWhenReady();
+                } else {
+                  // Wait for h3-layer to be added
+                  map.current.once('sourcedata', (e: any) => {
+                    if (e.sourceId === 'h3-cells' && e.isSourceLoaded) {
+                      setTimeout(addThermalWhenReady, 300);
+                    }
+                  });
+                  // Also try after timeout
+                  setTimeout(addThermalWhenReady, 1000);
+                }
+              } else {
+                // Wait for thermal source to load
+                map.current.once('sourcedata', (e: any) => {
+                  if (e.sourceId === 'thermal-heat-points' && e.isSourceLoaded && map.current) {
+                    setTimeout(addThermalWhenReady, 300);
+                  }
+                });
+              }
+            } else {
+              console.warn('⚠️ No thermal points created - thermal overlay will not be visible');
+            }
+            
             // Add gradient fill layer (will wait for source to be ready)
-            addH3GradientLayer(map.current, onH3Click, geojson);
+            addH3GradientLayer(map.current, onH3Click, geojson, viewMode);
             
             console.log('✅ H3 gradient layer setup initiated');
             
@@ -1049,9 +1604,232 @@ const MapComponent: React.FC<MapComponentProps> = ({ onH3Click, selectedH3 }) =>
     }
   }, [selectedH3, mapLoaded, allH3Data]);
 
+  // Toggle thermal overlay visibility and ensure layer exists
+  useEffect(() => {
+    if (mapLoaded && map.current && allH3Data) {
+      // Update visibility if layer exists
+      if (map.current) {
+        const layer = safeGetLayer(map.current, 'thermal-heat-overlay');
+        if (layer) {
+          map.current.setLayoutProperty(
+            'thermal-heat-overlay',
+            'visibility',
+            'none' // Always hidden - heat is shown in cells
+          );
+        }
+      }
+      
+      // Wait a bit for layers to be set up, then ensure thermal overlay
+      const timer1 = setTimeout(() => {
+        if (map.current) {
+          console.log('🔥 useEffect: Ensuring thermal overlay after H3 layer setup');
+          ensureThermalOverlay(map.current);
+          
+          // Double-check after another delay
+          setTimeout(() => {
+            if (map.current) {
+              const layer = safeGetLayer(map.current, 'thermal-heat-overlay');
+              const source = safeGetSource(map.current, 'thermal-heat-points');
+              if (!layer && source) {
+                console.log('🔥 Retrying thermal overlay addition...');
+                ensureThermalOverlay(map.current);
+              }
+            }
+          }, 1000);
+        }
+      }, 500);
+      
+      // If source exists but layer doesn't, wait a bit and try again
+      let timer2: NodeJS.Timeout | null = null;
+      if (map.current) {
+        const source = safeGetSource(map.current, 'thermal-heat-points');
+        const layer = safeGetLayer(map.current, 'thermal-heat-overlay');
+        if (source && !layer) {
+          timer2 = setTimeout(() => {
+            if (map.current) {
+              ensureThermalOverlay(map.current);
+            }
+          }, 500);
+        }
+      }
+      
+      // Also listen for source data events to add layer when source becomes ready
+      let handleSourceData: ((e: any) => void) | null = null;
+      if (map.current) {
+        const source = safeGetSource(map.current, 'thermal-heat-points');
+        if (source) {
+          handleSourceData = () => {
+            if (map.current && !safeGetLayer(map.current, 'thermal-heat-overlay')) {
+              ensureThermalOverlay(map.current);
+            }
+          };
+          map.current.on('sourcedata', handleSourceData);
+        }
+      }
+      
+      return () => {
+        clearTimeout(timer1);
+        if (timer2) clearTimeout(timer2);
+        if (map.current && handleSourceData) {
+          map.current.off('sourcedata', handleSourceData);
+        }
+      };
+    }
+  }, [mapLoaded, allH3Data]); // Removed showThermalOverlay dependency
+
+  // Update H3 layer colors when view mode changes
+  useEffect(() => {
+    if (mapLoaded && map.current) {
+      const layer = safeGetLayer(map.current, 'h3-layer');
+      if (layer) {
+        // Build the color expression based on view mode
+        let fillColorExpression: any;
+        
+        if (viewMode === 'trees') {
+          // Green gradient for tree priority
+          fillColorExpression = [
+            'interpolate',
+            ['linear'],
+            ['coalesce', ['get', 'priority_final'], 0],
+            0, '#e8f5e9',      // Very light green
+            0.1, '#c8e6c9',
+            0.2, '#a5d6a7',
+            0.3, '#81c784',
+            0.4, '#66bb6a',
+            0.5, '#4caf50',
+            0.6, '#388e3c',
+            0.7, '#2e7d32',
+            0.8, '#1b5e20',
+            1.0, '#0d4f1c'     // Darkest green
+          ];
+        } else {
+          // Red gradient for heat index
+          // Use thermal_value which matches the thermal points calculation
+          // Note: thermal_value is already normalized 0-1, so we use it directly
+          fillColorExpression = [
+            'interpolate',
+            ['linear'],
+            [
+              'coalesce',
+              ['get', 'thermal_value'], // Use the same thermal value as thermal points (0-1 range)
+              ['get', 'thermal_proxy_normalized'], // Fallback to thermal proxy
+              ['get', 'earth2_temp_c'],
+              ['get', 'heat_vulnerability_index'],
+              ['get', 'heat_score'],
+              0.5 // Final fallback
+            ],
+            0, '#fff5f5',      // Very light pink/red - cool
+            0.1, '#ffe5e5',    // Light pink
+            0.2, '#ffcccc',    // Light-medium pink
+            0.3, '#ffb3b3',    // Medium-light pink
+            0.4, '#ff9999',    // Medium pink
+            0.5, '#ff8080',    // Medium-dark pink
+            0.6, '#ff6666',    // Dark pink
+            0.7, '#ff4d4d',    // Dark red-pink
+            0.8, '#ff3333',    // Dark red
+            0.9, '#cc0000',    // Darker red
+            1.0, '#990000'     // Darkest red - hottest
+          ];
+        }
+        
+        map.current.setPaintProperty('h3-layer', 'fill-color', fillColorExpression);
+        
+        // Force a repaint to ensure colors update
+        map.current.triggerRepaint();
+        
+        console.log(`📊 H3 layer updated to ${viewMode} mode`);
+        if (viewMode === 'heat') {
+          console.log(`   Using thermal_value for heat index colors`);
+          console.log(`   Color expression:`, fillColorExpression);
+          
+          // Verify thermal values in source
+          try {
+            const source = safeGetSource(map.current, 'h3-cells');
+            if (source) {
+              const sourceData = (source as any)._data;
+              if (sourceData?.features) {
+                const thermalValues = sourceData.features
+                  .slice(0, 10)
+                  .map((f: any) => f.properties?.thermal_value)
+                  .filter((v: any) => v != null);
+                console.log(`   Sample thermal_value from source:`, thermalValues);
+                
+                const allThermalVals = sourceData.features
+                  .map((f: any) => f.properties?.thermal_value)
+                  .filter((v: any) => v != null && !isNaN(v));
+                if (allThermalVals.length > 0) {
+                  const minVal = Math.min(...allThermalVals);
+                  const maxVal = Math.max(...allThermalVals);
+                  const avgVal = allThermalVals.reduce((a: number, b: number) => a + b, 0) / allThermalVals.length;
+                  console.log(`   Source thermal_value stats:`);
+                  console.log(`      Range: min=${minVal.toFixed(3)}, max=${maxVal.toFixed(3)}`);
+                  console.log(`      Average: ${avgVal.toFixed(3)}, count=${allThermalVals.length}`);
+                  console.log(`      Values < 0.3: ${allThermalVals.filter((v: number) => v < 0.3).length}`);
+                  console.log(`      Values 0.3-0.6: ${allThermalVals.filter((v: number) => v >= 0.3 && v < 0.6).length}`);
+                  console.log(`      Values 0.6-0.9: ${allThermalVals.filter((v: number) => v >= 0.6 && v < 0.9).length}`);
+                  console.log(`      Values >= 0.9: ${allThermalVals.filter((v: number) => v >= 0.9).length}`);
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('Could not verify thermal values in source:', e);
+          }
+        }
+        
+        // Hide thermal overlay when in heat mode (heat is shown in cells)
+        const thermalLayer = safeGetLayer(map.current, 'thermal-heat-overlay');
+        if (thermalLayer) {
+          map.current.setLayoutProperty(
+            'thermal-heat-overlay',
+            'visibility',
+            viewMode === 'heat' ? 'none' : 'none' // Always hide - heat shown in cells
+          );
+        }
+      }
+    }
+  }, [viewMode, mapLoaded]);
+
   return (
     <div className="map-container">
       <div ref={mapContainer} className="map" />
+      {/* View mode toggle */}
+      <div style={{
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        background: 'rgba(255, 255, 255, 0.9)',
+        padding: '0.75rem',
+        borderRadius: '8px',
+        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+        zIndex: 1000,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.5rem'
+      }}>
+        <div style={{ fontSize: '0.85rem', fontWeight: 'bold', marginBottom: '0.25rem' }}>View Mode:</div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+          <input
+            type="radio"
+            name="viewMode"
+            value="trees"
+            checked={viewMode === 'trees'}
+            onChange={(e) => setViewMode('trees')}
+            style={{ cursor: 'pointer' }}
+          />
+          <span>🟢 Trees (Priority)</span>
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem' }}>
+          <input
+            type="radio"
+            name="viewMode"
+            value="heat"
+            checked={viewMode === 'heat'}
+            onChange={(e) => setViewMode('heat')}
+            style={{ cursor: 'pointer' }}
+          />
+          <span>🌡️ Heat Index</span>
+        </label>
+      </div>
     </div>
   );
 };

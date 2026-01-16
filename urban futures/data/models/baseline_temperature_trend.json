@@ -1,0 +1,13 @@
+{
+  "long_term_slope_f_per_year": 0.05292905567714721,
+  "recent_slope_f_per_year": 0.05383064516128966,
+  "mean_temperature_f": 35.965648854961835,
+  "std_temperature_f": 4.331471392761989,
+  "baseline_temperature_f": 40.10909090909092,
+  "baseline_year": 2025,
+  "data_range": {
+    "start_year": 1895,
+    "end_year": 2025,
+    "n_years": 131
+  }
+}

@@ -224,6 +224,13 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ zipcode, h3Cell }) => {
         </div>
       </div>
 
+      {/* Sign in button outside dropdown */}
+      {isGuest && (
+        <div className="guest-notice" style={{ marginTop: '1rem', marginBottom: '1rem' }}>
+          <span>🔒 Sign in to leave a review</span>
+        </div>
+      )}
+
       <div className={`review-content ${expanded ? 'expanded' : ''}`}>
         {user && !isGuest && (
           <div className="review-action">
@@ -236,12 +243,6 @@ const ReviewSection: React.FC<ReviewSectionProps> = ({ zipcode, h3Cell }) => {
                 {showForm ? 'Cancel' : '+ Add Review'}
               </button>
             )}
-          </div>
-        )}
-
-        {isGuest && (
-          <div className="guest-notice">
-            <span>🔒 Sign in to leave a review</span>
           </div>
         )}
 

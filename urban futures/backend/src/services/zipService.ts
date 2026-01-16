@@ -29,6 +29,8 @@ interface ZipData {
   recommended_tree_count: number;
   projected_temp_reduction_F: number;
   projected_pm25_reduction_lbs_per_year: number;
+  projected_co2_reduction_kg_per_year?: number;
+  current_co2_reduction_kg_per_year?: number;
   priority_final: number;
   ej_score: number;
   features: ZipFeature;
@@ -236,12 +238,18 @@ print(json.dumps({'impact_per_dollar': float(prediction)}))
     const projected_temp_reduction_F = recommended_tree_count * 0.02; // Scaled down
     const projected_pm25_reduction_lbs_per_year = recommended_tree_count * 0.16;
     
+    // CO2 reduction: average mature tree sequesters ~21.77 kg CO2 per year
+    const current_co2_reduction_kg_per_year = features.tree_count * 21.77;
+    const projected_co2_reduction_kg_per_year = recommended_tree_count * 21.77;
+    
     return {
       zipcode,
       impact_per_dollar,
       recommended_tree_count,
       projected_temp_reduction_F,
       projected_pm25_reduction_lbs_per_year,
+      projected_co2_reduction_kg_per_year,
+      current_co2_reduction_kg_per_year,
       priority_final: features.priority_final,
       ej_score: features.ej_score,
       features

@@ -31,6 +31,16 @@ interface H3Feature {
   flood_risk: number;
   population_density: number;
   planting_history: number;
+  // Enhanced fields from untitled folder
+  earth2_temp_c?: number;
+  tree_cooling_c?: number;
+  earth2_tree_count?: number;
+  temp_priority?: number;
+  // CO2 reduction fields
+  co2_reduction_kg_per_year: number;
+  projected_co2_reduction_kg_per_year: number;
+  additional_co2_reduction_kg_per_year: number;
+  recommended_tree_count: number;
 }
 
 interface H3Data {
@@ -40,6 +50,8 @@ interface H3Data {
   recommended_tree_count: number;
   projected_temp_reduction_F: number;
   projected_pm25_reduction_lbs_per_year: number;
+  projected_co2_reduction_kg_per_year: number;
+  current_co2_reduction_kg_per_year: number;
   priority_final: number;
   ej_score: number;
   tree_count: number;
@@ -351,12 +363,18 @@ except Exception as e:
       priority_final = priority_base * (1 + 0.4 * ej_score);
     }
 
-    const recommended_tree_count = Math.max(0, Math.floor(
+    // Use recommended_tree_count from features if available, otherwise calculate
+    const recommended_tree_count = features.recommended_tree_count || Math.max(0, Math.floor(
       priority_final * 100 + (features.tree_gap || 0) * 50
     ));
 
     const projected_temp_reduction_F = recommended_tree_count * 0.02;
     const projected_pm25_reduction_lbs_per_year = recommended_tree_count * 0.16;
+    
+    // Get CO2 reduction from features (calculated in enhancement script)
+    const current_co2_reduction_kg_per_year = features.co2_reduction_kg_per_year || 0;
+    const projected_co2_reduction_kg_per_year = features.projected_co2_reduction_kg_per_year || 
+      (recommended_tree_count * 21.77); // Fallback: 21.77 kg CO2 per tree per year
 
     return {
       h3_cell: h3Cell,
@@ -365,6 +383,8 @@ except Exception as e:
       recommended_tree_count,
       projected_temp_reduction_F,
       projected_pm25_reduction_lbs_per_year,
+      projected_co2_reduction_kg_per_year,
+      current_co2_reduction_kg_per_year,
       priority_final,
       ej_score: features.ej_score,
       tree_count: features.tree_count,

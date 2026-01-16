@@ -28,98 +28,79 @@ A full-stack geospatial simulation and interactive dashboard that identifies opt
 ## 📁 Project Structure
 
 ```
-.
+urban futures/
 ├── backend/              # Node.js/TypeScript API server
 │   ├── src/
 │   │   ├── index.ts      # Express app & routes
-│   │   └── services/     # Business logic
+│   │   └── services/     # Business logic (H3, prediction, simulation)
 │   └── package.json
 │
 ├── frontend/             # React/Mapbox dashboard
 │   ├── src/
-│   │   ├── components/   # MapComponent, Sidebar
+│   │   ├── components/   # MapComponent, Sidebar, UI components
 │   │   ├── styles/       # Bloomberg-style CSS
 │   │   └── App.tsx
 │   └── package.json
 │
 ├── python/               # Data preparation & training
 │   ├── data_pipeline/
-│   │   └── prepare_zip_features.py
+│   │   ├── prepare_zip_features.py
+│   │   └── h3_utils.py
 │   └── model_training/
-│       └── train_model.py
+│       ├── train_model.py
+│       ├── prediction_server.py
+│       └── [other training scripts]
 │
-├── cpp/                  # Neural network inference
+├── cpp/                  # Neural network inference (optional)
 │   ├── src/
 │   │   ├── impact_model.cpp
 │   │   └── main.cpp
-│   ├── include/
-│   │   └── impact_model.h
 │   └── CMakeLists.txt
 │
-└── data/
-    ├── cache/            # Raw CSV datasets
-    ├── processed/        # Processed Parquet files
-    ├── external/         # ZIP boundaries, building footprints
-    └── models/           # Trained model weights
+├── data/
+│   ├── cache/            # Raw CSV datasets
+│   ├── processed/        # Processed Parquet files
+│   ├── external/         # ZIP boundaries, building footprints
+│   └── models/           # Trained model weights & features
+│
+└── docs/                 # All documentation
+    ├── QUICKSTART.md
+    ├── PROJECT_STRUCTURE.md
+    └── [other docs]
 ```
+
+For detailed structure documentation, see [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md).
 
 ## 🚀 Quick Start
 
-### Prerequisites
+See **[docs/QUICKSTART.md](docs/QUICKSTART.md)** for detailed setup instructions.
 
-- Python 3.8+ with pandas, geopandas, scipy, scikit-learn
-- Node.js 18+ and npm
-- C++ compiler (g++ or clang) with C++17 support
-- Mapbox access token (free tier available)
-
-### 1. Prepare Data
+### Quick Setup
 
 ```bash
-# Install Python dependencies
-pip install pandas geopandas scipy scikit-learn pyarrow
+# 1. Install dependencies
+./setup.sh
 
-# Run data preparation pipeline
+# 2. Configure Mapbox token
+cd frontend
+echo "REACT_APP_MAPBOX_TOKEN=your_token_here" > .env
+echo "REACT_APP_API_URL=http://localhost:3001" >> .env
+cd ..
+
+# 3. Prepare data
 cd python/data_pipeline
 python3 prepare_zip_features.py
+cd ../..
 
-# Train model
-cd ../model_training
-python3 train_model.py
+# 4. Start services
+# Terminal 1: Backend
+cd backend && npm start
+
+# Terminal 2: Frontend  
+cd frontend && npm start
 ```
 
-### 2. Build C++ Inference Engine (Optional)
-
-```bash
-cd cpp
-mkdir -p build
-cd build
-cmake ..
-make
-```
-
-### 3. Start Backend API
-
-```bash
-cd backend
-npm install
-npm run build
-npm start
-# Server runs on http://localhost:3001
-```
-
-### 4. Start Frontend Dashboard
-
-```bash
-cd frontend
-npm install
-
-# Set Mapbox token (create .env file)
-echo "REACT_APP_MAPBOX_TOKEN=your_mapbox_token_here" > .env
-echo "REACT_APP_API_URL=http://localhost:3001" >> .env
-
-npm start
-# Dashboard opens at http://localhost:3000
-```
+For detailed instructions, troubleshooting, and architecture docs, see the [docs/](docs/) directory.
 
 ## 📊 Data Sources
 
