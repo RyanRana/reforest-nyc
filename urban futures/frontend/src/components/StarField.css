@@ -1,0 +1,70 @@
+.star-field {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  width: 100vw;
+  height: 100vh;
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 50%, transparent 100%);
+  pointer-events: none;
+}
+
+.star-field__small {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+  animation: rising-stars 333s linear infinite;
+}
+
+.star-field__small::after {
+  content: '';
+  position: absolute;
+  top: 2048px;
+  width: 1px;
+  height: 1px;
+  background: transparent;
+}
+
+.star-field__medium {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: transparent;
+  animation: rising-stars 666s linear infinite;
+}
+
+.star-field__medium::after {
+  content: '';
+  position: absolute;
+  top: 2048px;
+  width: 2px;
+  height: 2px;
+  background: transparent;
+}
+
+.star-field__large {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: transparent;
+  animation: rising-stars 999s linear infinite;
+}
+
+.star-field__large::after {
+  content: '';
+  position: absolute;
+  top: 2048px;
+  width: 3px;
+  height: 3px;
+  background: transparent;
+}
+
+@keyframes rising-stars {
+  from {
+    transform: translateY(0px);
+  }
+  to {
+    transform: translateY(-3840px);
+  }
+}
+

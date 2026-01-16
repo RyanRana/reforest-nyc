@@ -1,0 +1,269 @@
+.map-instructions-overlay {
+  position: absolute;
+  top: 80px; /* Account for header */
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  pointer-events: none; /* Allow clicks to pass through to map */
+}
+
+.map-instructions-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.map-instructions-content {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  max-width: 800px;
+  width: 100%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.4s ease-out;
+  position: relative;
+  pointer-events: auto; /* Allow interaction with content */
+}
+
+.instructions-close {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  background: none;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6b7280;
+  transition: all 0.2s ease;
+  z-index: 10;
+}
+
+.instructions-close:hover {
+  background: #f3f4f6;
+  color: #374151;
+}
+
+.instructions-close svg {
+  width: 20px;
+  height: 20px;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.instructions-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.instructions-header h2 {
+  color: #14532d;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+  font-family: 'Times New Roman', Times, serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.instructions-header h2 svg {
+  width: 1.5rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.instructions-header p {
+  color: #6b7280;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.instructions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.instruction-card {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.instruction-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.instruction-icon {
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+  display: block;
+}
+
+.instruction-icon svg {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.instruction-card h3 {
+  color: #14532d;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.instruction-card p {
+  color: #6b7280;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.priority-high {
+  color: #166534;
+  font-weight: 600;
+}
+
+.priority-medium {
+  color: #ca8a04;
+  font-weight: 600;
+}
+
+.priority-low {
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.instructions-footer {
+  border-top: 1px solid #e9ecef;
+  padding-top: 1.5rem;
+  text-align: center;
+}
+
+.instructions-footer p {
+  color: #6b7280;
+  font-size: 0.95rem;
+  margin-bottom: 1.5rem;
+  font-style: italic;
+}
+
+.dismiss-instructions {
+  background: #14532d;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  font-family: 'Times New Roman', Times, serif;
+}
+
+.dismiss-instructions:hover {
+  background: #0f3d26;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+  .map-instructions-overlay {
+    padding: 1rem;
+    top: 70px;
+  }
+
+  .map-instructions-content {
+    padding: 1.5rem;
+    max-height: 85vh;
+  }
+
+  .instructions-close {
+    top: 0.75rem;
+    right: 0.75rem;
+    width: 28px;
+    height: 28px;
+  }
+
+  .instructions-close svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .instructions-header h2 {
+    font-size: 1.5rem;
+  }
+
+  .instructions-header h2 svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+
+  .instructions-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .instruction-card {
+    padding: 1rem;
+  }
+
+  .instruction-icon {
+    font-size: 1.25rem;
+  }
+
+  .instruction-icon svg {
+    width: 1.25rem;
+    height: 1.25rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .map-instructions-overlay {
+    padding: 0.5rem;
+  }
+
+  .map-instructions-content {
+    padding: 1rem;
+  }
+
+  .instructions-header h2 {
+    font-size: 1.3rem;
+  }
+
+  .instruction-card h3 {
+    font-size: 1rem;
+  }
+
+  .dismiss-instructions {
+    width: 100%;
+    padding: 1rem;
+  }
+}

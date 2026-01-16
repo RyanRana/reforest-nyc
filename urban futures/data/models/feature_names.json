@@ -1,0 +1,14 @@
+[
+  "heat_score",
+  "air_quality_score",
+  "tree_density",
+  "cooling_site_distance_norm",
+  "ej_score",
+  "pollution_proxy",
+  "fuel_oil_log",
+  "heat_x_ej",
+  "air_x_ej",
+  "heat_x_air",
+  "tree_gap_x_ej",
+  "heat_air_combined"
+]

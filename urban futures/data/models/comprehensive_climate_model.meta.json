@@ -1,0 +1,11 @@
+{
+  "architecture": "cpp",
+  "feature_names": [
+    "tree_canopy_baseline",
+    "tree_canopy_control",
+    "tree_canopy_planned",
+    "air_quality_pm25",
+    "air_quality_aqi"
+  ],
+  "is_trained": true
+}

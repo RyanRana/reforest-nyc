@@ -1,0 +1,67 @@
+{
+  "datasets": {
+    "heat_vulnerability": {
+      "name": "Heat Vulnerability Index Rankings",
+      "url": "https://data.cityofnewyork.us/api/views/4mhf-duep/rows.csv?accessType=DOWNLOAD",
+      "description": "Heat vulnerability rankings per zip code"
+    },
+    "sea_level_rise_maps": {
+      "name": "Sea Level Rise Maps 2080s 100-year Floodplain",
+      "url": "https://data.cityofnewyork.us/api/views/6jtr-t483/rows.csv?accessType=DOWNLOAD",
+      "description": "Future flood risk maps with sea level rise"
+    },
+    "fuel_oil_data": {
+      "name": "Office of Climate and Sustainability 2017 Fuel Oil Data",
+      "url": "https://data.cityofnewyork.us/api/views/75g4-kk7x/rows.csv?accessType=DOWNLOAD",
+      "description": "Heating oil delivery data for buildings"
+    },
+    "air_quality": {
+      "name": "Air Quality Surveillance Data",
+      "url": "https://data.cityofnewyork.us/api/views/c3uy-2p5r/rows.csv?accessType=DOWNLOAD",
+      "description": "NYC air quality monitoring data"
+    },
+    "cooling_sites": {
+      "name": "Cool It! NYC 2020 Cooling Sites",
+      "url": "https://data.cityofnewyork.us/api/views/h2bn-gu9k/rows.csv?accessType=DOWNLOAD",
+      "description": "Cooling amenities activated during heat emergencies"
+    },
+    "indoor_environmental": {
+      "name": "DOHMH Indoor Environmental Complaints",
+      "url": "https://data.cityofnewyork.us/api/views/9jgj-bmct/rows.csv?accessType=DOWNLOAD",
+      "description": "Indoor environmental complaints and violations"
+    },
+    "oer_cleanup_sites": {
+      "name": "OER Cleanup Sites",
+      "url": "https://data.cityofnewyork.us/api/views/3279-pp7v/rows.csv?accessType=DOWNLOAD",
+      "description": "Environmental remediation projects"
+    },
+    "hazard_mitigation": {
+      "name": "Hazard Mitigation Plan Mitigation Actions Database",
+      "url": "https://data.cityofnewyork.us/api/views/veqt-eu3t/rows.csv?accessType=DOWNLOAD",
+      "description": "City efforts to reduce or eliminate potential losses from hazards"
+    },
+    "bike_counts": {
+      "name": "NYCDCP Manhattan Bike Count Locations",
+      "url": "https://data.cityofnewyork.us/api/views/xiyt-f6tz/rows.csv?accessType=DOWNLOAD",
+      "description": "Bicycle traffic count locations"
+    },
+    "ferry_schedule": {
+      "name": "Staten Island Ferry Schedule",
+      "url": "https://data.cityofnewyork.us/api/views/b57i-ri22/rows.csv?accessType=DOWNLOAD",
+      "description": "Staten Island Ferry schedule data"
+    }
+  },
+  "download_results": {
+    "heat_vulnerability": true,
+    "sea_level_rise_maps": true,
+    "fuel_oil_data": true,
+    "air_quality": true,
+    "cooling_sites": true,
+    "indoor_environmental": true,
+    "oer_cleanup_sites": true,
+    "hazard_mitigation": true,
+    "bike_counts": true,
+    "ferry_schedule": false
+  },
+  "download_timestamp": "2025-12-02T13:27:21.144730"
+}

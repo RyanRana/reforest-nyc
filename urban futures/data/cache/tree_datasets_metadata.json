@@ -1,0 +1,124 @@
+{
+  "download_timestamp": "2025-12-02T13:51:48",
+  "datasets_downloaded": {
+    "street_trees_2015": {
+      "name": "2015 Street Tree Census",
+      "filename": "street_trees_2015.csv",
+      "size_mb": 210.15,
+      "rows": 683789,
+      "columns": 45,
+      "description": "Complete inventory of all NYC street trees from 2015 census",
+      "key_columns": [
+        "tree_id",
+        "block_id",
+        "tree_dbh",
+        "status",
+        "health",
+        "spc_latin",
+        "spc_common",
+        "latitude",
+        "longitude"
+      ],
+      "use_case": "Identify existing street trees, calculate canopy coverage, find gaps",
+      "source_url": "https://data.cityofnewyork.us/Environment/2015-Street-Tree-Census-Tree-Data/uvpi-gqnh"
+    },
+    "block_planting": {
+      "name": "Block Planting",
+      "filename": "block_planting.csv",
+      "size_mb": 4.00,
+      "rows": 114944,
+      "columns": 12,
+      "description": "Street tree planting records by block",
+      "key_columns": [
+        "PHYSICALID",
+        "BOROUGHCODE",
+        "BlkSurv",
+        "BlkPlnt",
+        "PlntSeas",
+        "PlantingContract"
+      ],
+      "use_case": "Track where trees have been planted, identify planting patterns",
+      "source_url": "https://data.cityofnewyork.us/Environment/Block-Planting/h426-x5gi"
+    },
+    "block_pruning": {
+      "name": "Block Pruning",
+      "filename": "block_pruning.csv",
+      "size_mb": 4.36,
+      "rows": 83200,
+      "columns": 6,
+      "description": "Street tree pruning records",
+      "key_columns": [
+        "PhysicalID",
+        "BoroughCode",
+        "FiscalYearPruned",
+        "Contract"
+      ],
+      "use_case": "Maintenance tracking, tree health indicators",
+      "source_url": "https://data.cityofnewyork.us/Environment/Block-Pruning/tqsy-2s6w"
+    },
+    "forest_restoration": {
+      "name": "Forest Restoration Tracking",
+      "filename": "forest_restoration.csv",
+      "size_mb": 2.68,
+      "rows": "Unknown",
+      "columns": 6,
+      "description": "Tracking of work related to restoration and maintenance of native forests",
+      "key_columns": [
+        "SiteName",
+        "GISPropNum",
+        "InitPlntSn",
+        "Acreage"
+      ],
+      "use_case": "Identify forest restoration areas, reforestation sites",
+      "source_url": "https://data.cityofnewyork.us/Environment/Forest-Restoration-Tracking/sivq-4tyd"
+    },
+    "tree_contract_work": {
+      "name": "Tree Contract Work Details",
+      "filename": "tree_contract_work.csv",
+      "size_mb": 34.11,
+      "rows": "Unknown",
+      "columns": 11,
+      "description": "Records of plant material and tree contract work",
+      "key_columns": [
+        "transaction_id",
+        "contract_number",
+        "work_order_id",
+        "item_number"
+      ],
+      "use_case": "Tree species inventory, planting records, cost tracking",
+      "source_url": "https://data.cityofnewyork.us/dataset/Tree-Contract-Work-Details/kcfe-uypz"
+    }
+  },
+  "datasets_failed": {
+    "tree_inventory": {
+      "name": "Tree Inventory",
+      "uid": "k5ta-2trh",
+      "reason": "Dataset may be deprecated or requires different access method",
+      "note": "May be available as shapefile or through different endpoint"
+    },
+    "city_owned_property": {
+      "name": "City Owned and Leased Property",
+      "uid": "2mhq-um7h",
+      "reason": "Dataset may be deprecated or requires different access method",
+      "note": "May be available as shapefile or through DCP website"
+    }
+  },
+  "datasets_external": {
+    "pseudo_lots": {
+      "name": "Pseudo Lots",
+      "filename": "nyc_pseudo_lots.csv",
+      "location": "data/external/",
+      "description": "Pseudo tax lots created by DCP for addresses without DOF tax lots",
+      "source_url": "https://data.cityofnewyork.us/City-Government/Pseudo-Lots/dx24-9ef7"
+    }
+  },
+  "notes": {
+    "million_trees_nyc": "File appears empty - may require different download method or dataset may be deprecated",
+    "data_organization": "All tree-related datasets organized in data/cache/ following existing project structure",
+    "integration": "Ready to integrate with existing heat_vulnerability.csv and air_quality.csv datasets"
+  }
+}
+
+
+
+

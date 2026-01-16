@@ -1,0 +1,21 @@
+{
+  "processing_timestamp": "2025-12-02T13:27:41.545179",
+  "datasets_processed": [
+    "heat_vulnerability",
+    "fuel_oil",
+    "air_quality",
+    "cooling_sites",
+    "indoor_environmental",
+    "oer_cleanup_sites",
+    "hazard_mitigation"
+  ],
+  "dataset_sizes": {
+    "heat_vulnerability": 184,
+    "fuel_oil": 342,
+    "air_quality": 3159,
+    "cooling_sites": 218,
+    "indoor_environmental": 102354,
+    "oer_cleanup_sites": 2123,
+    "hazard_mitigation": 868
+  }
+}
