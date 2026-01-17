@@ -1,0 +1,390 @@
+/* Match Landing Page Section Styles Exactly */
+
+* {
+  font-family: 'Times New Roman', Times, serif !important;
+}
+
+html, body {
+  margin: 0 !important;
+  padding: 0 !important;
+  background: #ffffff !important;
+  color: #1a1a1a !important;
+}
+
+#root {
+  background: #ffffff !important;
+}
+
+/* Main container - match about-section */
+.min-h-screen {
+  background: #ffffff !important;
+  min-height: 100vh !important;
+  width: 100% !important;
+}
+
+/* Header - match landing page header */
+.min-h-screen > div:first-child {
+  background: #ffffff !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 2.5rem 3rem !important;
+}
+
+/* Container - match about-subsection */
+.container {
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
+}
+
+/* Logo */
+.healthcare-logo,
+img[src*="logo"] {
+  height: 50px !important;
+  width: auto !important;
+  margin-bottom: 1rem !important;
+  display: block !important;
+}
+
+/* Main title - match subsection-title */
+h1, .text-4xl {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: clamp(2.5rem, 4vw, 3.5rem) !important;
+  font-weight: normal !important;
+  letter-spacing: 0.02em !important;
+  margin: 0 0 3rem 0 !important;
+  text-align: center !important;
+  color: #1a1a1a !important;
+  line-height: 1.2 !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+}
+
+/* Subtitle - match subsection-text */
+p.text-lg {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem) !important;
+  line-height: 1.8 !important;
+  margin: 0 0 1.5rem 0 !important;
+  color: #2d3748 !important;
+  text-align: center !important;
+}
+
+/* Section headings - match dropdown-title */
+h2, .text-2xl {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: clamp(2rem, 3.5vw, 2.8rem) !important;
+  font-weight: normal !important;
+  letter-spacing: 0.02em !important;
+  margin: 0 0 0.5rem 0 !important;
+  color: #1a1a1a !important;
+  line-height: 1.2 !important;
+  text-align: left !important;
+}
+
+h3, .text-xl {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: clamp(1.5rem, 2.5vw, 2rem) !important;
+  font-weight: normal !important;
+  letter-spacing: 0.02em !important;
+  color: #1a1a1a !important;
+  margin: 0 0 1rem 0 !important;
+}
+
+/* Body text - match subsection-text */
+p, span, div {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: clamp(1.1rem, 1.5vw, 1.3rem) !important;
+  line-height: 1.8 !important;
+  color: #2d3748 !important;
+}
+
+/* Tabs - clean and minimal like landing page */
+[role="tablist"] {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-bottom: 3rem !important;
+  display: flex !important;
+  gap: 1rem !important;
+  justify-content: center !important;
+  flex-wrap: wrap !important;
+}
+
+[role="tab"] {
+  font-family: 'Times New Roman', Times, serif !important;
+  font-size: 0.95rem !important;
+  font-weight: normal !important;
+  letter-spacing: 0.1em !important;
+  color: #1a1a1a !important;
+  text-transform: uppercase !important;
+  transition: all 0.2s ease !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0.75rem 1.5rem !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+}
+
+[role="tab"]:hover {
+  color: #14532d !important;
+  background: transparent !important;
+  opacity: 0.7 !important;
+  box-shadow: none !important;
+}
+
+[role="tab"][data-state="active"] {
+  background: transparent !important;
+  color: #14532d !important;
+  border: none !important;
+  border-bottom: 2px solid #14532d !important;
+  box-shadow: none !important;
+  font-weight: normal !important;
+}
+
+/* Content area - match subsection-content */
+[role="tabpanel"] {
+  background: #ffffff !important;
+  padding: 0 !important;
+  max-width: 1000px !important;
+  margin: 0 auto !important;
+}
+
+/* Cards - match landing page card style */
+.bg-gradient-to-br,
+.bg-gradient-to-r,
+.rounded-lg,
+.rounded-xl,
+[class*="rounded"] {
+  background: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  margin-bottom: 1.5rem !important;
+  transition: all 0.3s ease !important;
+}
+
+.bg-gradient-to-br:hover,
+.rounded-lg:hover,
+.rounded-xl:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Accordion/Dropdown - match dropdown-header */
+[data-state="closed"],
+[data-state="open"] {
+  background: #ffffff !important;
+  border: none !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1) !important;
+  margin-bottom: 0 !important;
+  padding: 1.5rem 0 !important;
+  box-shadow: none !important;
+}
+
+[data-state="open"] {
+  border-bottom-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+/* Tables - clean like landing page */
+table {
+  background: #ffffff !important;
+  border: none !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  margin: 2rem 0 !important;
+  width: 100% !important;
+}
+
+th {
+  background: #f8f9fa !important;
+  color: #1a1a1a !important;
+  font-family: 'Times New Roman', Times, serif !important;
+  font-weight: 600 !important;
+  border: none !important;
+  padding: 1rem !important;
+  text-align: left !important;
+  letter-spacing: 0.02em !important;
+}
+
+td {
+  color: #2d3748 !important;
+  border: none !important;
+  border-top: 1px solid rgba(0, 0, 0, 0.05) !important;
+  font-family: 'Times New Roman', Times, serif !important;
+  padding: 1rem !important;
+}
+
+/* Lists */
+ul, ol {
+  font-family: 'Times New Roman', Times, serif !important;
+  color: #2d3748 !important;
+  line-height: 1.8 !important;
+  margin: 1rem 0 !important;
+  padding-left: 2rem !important;
+}
+
+li {
+  margin: 0.5rem 0 !important;
+  color: #2d3748 !important;
+}
+
+/* Links - match landing page */
+a {
+  color: #14532d !important;
+  text-decoration: none !important;
+  transition: opacity 0.2s ease !important;
+}
+
+a:hover {
+  opacity: 0.7 !important;
+  text-decoration: none !important;
+}
+
+/* Buttons - match landing page style */
+button {
+  font-family: 'Times New Roman', Times, serif !important;
+  transition: all 0.3s ease !important;
+  border: none !important;
+  background: transparent !important;
+  cursor: pointer !important;
+}
+
+button:hover {
+  box-shadow: none !important;
+  transform: none !important;
+  opacity: 0.7 !important;
+}
+
+/* Code blocks - clean and readable */
+code, pre {
+  background: #f8f9fa !important;
+  color: #1a1a1a !important;
+  border: none !important;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06) !important;
+  font-family: 'SF Mono', Monaco, 'Courier New', monospace !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 6px !important;
+  font-size: 0.9em !important;
+}
+
+pre {
+  padding: 1rem !important;
+  overflow-x: auto !important;
+  margin: 1rem 0 !important;
+}
+
+/* Icons */
+svg {
+  color: #475569 !important;
+}
+
+button:hover svg,
+[data-state="active"] svg {
+  color: #14532d !important;
+}
+
+/* Badges - subtle green accent */
+.bg-green-500,
+.bg-emerald-500,
+.bg-teal-500,
+[class*="bg-green"],
+[class*="bg-emerald"] {
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(20, 83, 45, 0.08) 100%) !important;
+  color: #14532d !important;
+  border: none !important;
+  box-shadow: 0 2px 6px rgba(20, 83, 45, 0.1) !important;
+  padding: 0.5rem 1rem !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
+}
+
+/* Remove all borders */
+.border,
+.border-t,
+.border-b,
+.border-l,
+.border-r,
+.border-gray-700,
+.border-gray-800,
+.border-gray-600 {
+  border: none !important;
+}
+
+/* Remove background gradients that don't match */
+.from-\\[#0a0f0a\\],
+.via-\\[#0f1810\\],
+.to-\\[#1a2820\\],
+.bg-gradient-to-br.from-\\[#0a0f0a\\],
+[class*="from-"],
+[class*="via-"],
+[class*="to-"] {
+  background: #ffffff !important;
+  background-image: none !important;
+}
+
+/* Text colors - consistent */
+.text-gray-400,
+.text-gray-500,
+.text-gray-600 {
+  color: #2d3748 !important;
+}
+
+.text-gray-300 {
+  color: #1a1a1a !important;
+}
+
+/* Section spacing */
+section, .mt-6, .py-6, .px-6 {
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+/* Content wrapper */
+.mx-auto {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+/* Grid layouts */
+.grid {
+  display: grid !important;
+  gap: 2rem !important;
+}
+
+/* Flex layouts */
+.flex {
+  display: flex !important;
+}
+
+.items-center {
+  align-items: center !important;
+}
+
+.gap-2 {
+  gap: 0.5rem !important;
+}
+
+.gap-3 {
+  gap: 0.75rem !important;
+}
+
+/* Responsive text sizing */
+@media (max-width: 768px) {
+  h1, .text-4xl {
+    font-size: clamp(2rem, 5vw, 2.5rem) !important;
+  }
+  
+  h2, .text-2xl {
+    font-size: clamp(1.5rem, 4vw, 2rem) !important;
+  }
+  
+  p, span, div {
+    font-size: clamp(1rem, 2vw, 1.2rem) !important;
+  }
+}

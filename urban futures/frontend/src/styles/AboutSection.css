@@ -929,31 +929,35 @@
   align-items: center;
   gap: 1rem;
   padding: 1.25rem 2rem;
-  background: #1a1a1a;
-  color: #ffffff;
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.1) 0%, rgba(20, 83, 45, 0.08) 100%);
+  border: 1.5px solid rgba(20, 83, 45, 0.3);
+  color: #14532d;
   text-decoration: none;
   font-family: 'Times New Roman', Times, serif;
   font-size: 1.1rem;
   letter-spacing: 0.02em;
-  border-radius: 8px;
+  border-radius: 12px;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 8px rgba(20, 83, 45, 0.1);
 }
 
 .trust-link:hover {
-  background: #2d3748;
+  background: linear-gradient(135deg, rgba(22, 163, 74, 0.2) 0%, rgba(20, 83, 45, 0.15) 100%);
+  border-color: rgba(22, 163, 74, 0.5);
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 12px rgba(20, 83, 45, 0.2);
 }
 
 .trust-link span:first-of-type {
   font-size: 1.5rem;
+  color: #14532d;
 }
 
 .link-arrow {
   margin-left: auto;
   font-size: 1.2rem;
   transition: transform 0.3s ease;
+  color: #14532d;
 }
 
 .trust-link:hover .link-arrow {

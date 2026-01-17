@@ -295,6 +295,16 @@ const AboutSection: React.FC<AboutSectionProps> = ({ onNavigate, showEvents = fa
               <span>Run & Train Locally</span>
               <span className="link-arrow">→</span>
             </a>
+            <a 
+              href="/healthcare/index.html" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="trust-link"
+            >
+              <span>🏥</span>
+              <span>Healthcare Productivity by ZIP</span>
+              <span className="link-arrow">→</span>
+            </a>
           </div>
         </div>
       </section>

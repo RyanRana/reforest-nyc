@@ -13,23 +13,23 @@ const StatisticsSection: React.FC = () => {
 
   const statistics: Statistic[] = [
     {
-      number: '525',
+      number: '525 deaths',
       description: 'preventable heat-related deaths annually in NYC',
       source: 'NYC Health Department 2025 Heat Mortality Report'
     },
     {
-      number: '69',
-      description: 'days/year above 90°F in the 2050s (4x today\'s average)',
+      number: '69 days/year',
+      description: 'above 90°F in the 2050s (4x today\'s average)',
       source: 'NPCC4 (2024) projections'
     },
     {
-      number: '~16.5″',
+      number: '16.5″',
       description: 'projected sea level rise by the 2050s',
       source: 'NPCC4 (2024) and NOAA-aligned projections'
     },
     {
-      number: '~ $163',
-      description: 'billion total projected future climate costs for NYC (taxpayer burden) through 2050',
+      number: '$163B',
+      description: 'total projected future climate costs for NYC (taxpayer burden) through 2050',
       source: 'NPCC4 (2024) Economic Impact Assessment'
     }
   ];

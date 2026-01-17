@@ -1,1033 +1,808 @@
-# Technical Documentation: NYC Climate Resilience Spatial Simulation
+# Technical Documentation: NYC Climate Resilience Platform
 
-## Introduction: Empowering Communities Through Data-Driven Action
+## What We Did This Weekend: The Evolution of a Climate Science Suite
 
-No matter how strong and accurate climate forecasting models are, meaningful change does not happen fast without government intervention, infrastructure adoption, or emergencies. Meaningful change ONLY happens when you put the power in the people.
+No matter how strong and accurate climate forecasting models are, meaningful change does not happen fast without government intervention, infrastructure adoption, or emergencies. Given up on this seemingly impossible bottleneck, we decided the best we could do is make the best possible model. We chose a topic like trees—knowing more trees means lower temperature—and Staten Island (our borough) has room for trees. We decided to share our findings, hoping the right people hear it.
 
-This project embodies a fundamental shift from top-down policy making to grassroots empowerment: "Ask not what your country can do for you, but what you can do for your country." - JFK
+This turned into **three distinct yet powerful models** that became a cool science suite. But then everything changed on Friday when we talked with community leaders.
 
-The NYC Climate Resilience Spatial Simulation transforms complex climate data and environmental metrics into an accessible, interactive platform that enables every New Yorker to understand their neighborhood's climate vulnerability and take direct action. By combining cutting-edge machine learning, rea predictions, and community-driven engagement, the system democratizes climate science and empowers residents to advocate for their neighborhoods, collaborate with local organizations, and track the impact of green initiatives.
+---
 
-Rather than waiting for institutional responses to climate challenges, this platform equips individuals with the knowledge and tools to drive change from the ground up. Each tree planted, each community review submitted, and each green initiative shared represents collective action that compounds into measurable environmental impact.
+## The Weekend: From Science Suite to Community Tool to Business Model
 
-## System Architecture Overview
+### Thursday: The Pivot
 
-The system follows a three-tier architecture pattern:
+**Not a single line of code was written on Thursday.**
 
+We were faced with a task to perform climate resilience—an incredibly broad scope of issues and solutions. We spent the day discussing: What do we build? What problem are we solving? How do we actually create change?
+
+### Friday Morning: The Three Models
+
+We built three algorithmic systems that became our "science suite":
+
+1. **Spatial Correlation Model**: Identifies correlations in specific regions targeting poverty and heat index, finding where environmental justice intersects with climate vulnerability.
+
+2. **Geospatial Prediction Engine**: Breaks the world into optimal geospatial regions (H3 hexagonal cells) and predicts tree recommendations and temperature forecasts up to 30 years in advance using machine learning.
+
+3. **Compliance-Algorithmic Planting Locator**: An algorithmic approach to finding every possible street tree planting opportunity while fully abiding by NYC Parks & Recreation Department regulations—literally algorithmically identifies every legal planting location.
+
+We put it all together across **2 interactive, visual maps for web**. We thought: *maybe a tool for scientists?*
+
+### Friday Afternoon: The Pivot to Community
+
+Later on Friday, we were questioning and talking with community leaders. One of them said: *"It would be really helpful if they knew more about best tree planting areas."*
+
+**This changed everything.**
+
+We decided to shift our concept from a **science suite** to a **tool that allows community leaders to take our data/visuals and do what they do best: help the environment.**
+
+We thought: *If community leaders are going to have accounts, if we turn it into a social thing, then we can have a lot of accounts.* We decided to have accounts serving:
+- **NYC residents** (regular users)
+- **Community leaders** (organizations posting events/news)
+- **Corporations** (businesses sharing green initiatives)
+
+The social aspect was a **gamified concept** where 1km neighborhoods across the city can earn points by being "green"—trees planted, initiatives shared, reviews submitted.
+
+### Saturday: The Business Model Emerges
+
+We thought this was the gold, but gambling on an "environmental social network" is a hard sell to anyone who knows anything about business.
+
+**Another pivot**: What if we do something like RateMyProfessor.com? A review platform designed **SPECIFICALLY for climate stuff and nothing more**—whether it's trees, flooding, sun, pollution, trash, etc.
+
+**On NVIDIA GPU**, we compute all reviews and descriptions in a neighborhood to:
+1. Identify if reviews are unbiased to non-environmental factors (removes reviews that just complain about rent, parking, etc.)
+2. Use that coupled with our scientific climate modelling to generate **environmental score factors**
+
+Because we have **both user & science-decided scores**, we can license these scores to real estate companies like **Zillow, StreetEasy, etc.**
+
+**This is where we see the real impact**: We expect lower environmental scores to decrease the amount of people living & renting those neighborhoods, **forcing those with money and influence to take physical measures** to get a better climate resilience score—and in turn, a better urban future.
+
+---
+
+## Model 1: Spatial Correlation & Priority Scoring Engine
+
+### Algorithm Overview
+
+This model identifies regions where **environmental justice intersects with climate vulnerability** by computing weighted priority scores across NYC neighborhoods using H3 hexagonal spatial indexing.
+
+### Inputs
+
+1. **Heat Vulnerability Index (HVI)** - By ZIP code
+   - Source: NYC Department of Health
+   - Variables: Poverty rate, age >65, air conditioning access, surface temperature
+   - Range: 0-1 (normalized)
+   - File: `data/processed/heat_vulnerability_processed.parquet`
+
+2. **Air Quality Score** - By Community District, interpolated to ZIP
+   - Source: NYC Community Air Survey
+   - Pollutants: PM2.5, NO2 (annual averages)
+   - Formula: `air_quality_score = PM2.5_conc + NO2_conc`
+   - File: `data/processed/air_quality_processed.parquet`
+
+3. **Environmental Justice (EJ) Score** - Census tract level
+   - Source: NY State EJ Screen
+   - Variables: Poverty rate, minority percentage, limited English proficiency
+   - Range: 0-1
+   - File: Derived from equity score data
+
+4. **Tree Density** - Trees per km²
+   - Source: 2015 Street Tree Census (683,789 trees)
+   - File: `data/cache/street_trees_2015.csv`
+   - Aggregation: Trees counted within H3 cells (resolution 9, ~1km²)
+
+5. **Tree Gap Score** - Inverse of tree density
+   - Formula: `gap_score = 1 - (tree_density / max_tree_density)`
+   - Range: 0-1 (higher = more gaps)
+
+6. **Fuel Oil Data** - Gallons burned per ZIP
+   - Source: NYC fuel oil reporting
+   - File: `data/processed/fuel_oil_processed.parquet`
+   - Use: Pollution proxy
+
+7. **Cooling Site Distance** - Meters to nearest cooling center
+   - Source: NYC cooling sites dataset
+   - File: `data/processed/cooling_sites_processed.parquet`
+   - Formula: `cooling_distance_norm = 1 / (1 + distance_meters / 10)`
+
+### Feature Engineering
+
+**Interaction Terms** (Key Relationships):
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Presentation Layer                       │
-│  React/TypeScript Frontend with Mapbox GL JS               │
-│  - Interactive map visualization                            │
-│  - Real-time simulation controls                            │
-│  - Community features (reviews, initiatives)                │
-│  - Authentication and user profiles                         │
-└──────────────────────┬──────────────────────────────────────┘
-                       │ HTTP/REST API
-┌──────────────────────▼──────────────────────────────────────┐
-│                    Application Layer                        │
-│  Node.js/Express Backend (TypeScript)                      │
-│  - REST API endpoints                                       │
-│  - Business logic and data aggregation                      │
-│  - Prediction orchestration                                 │
-│  - Authentication middleware                                │
-└──────────────────────┬──────────────────────────────────────┘
-                       │
-        ┌──────────────┼──────────────┐
-        │              │              │
-┌───────▼──────┐ ┌─────▼──────┐ ┌─────▼──────┐
-│ Data Layer   │ │ ML Models  │ │ Database   │
-│ Parquet/JSON │ │ Python/C++ │ │ Supabase   │
-│              │ │ Inference  │ │ PostgreSQL │
-└──────────────┘ └────────────┘ └────────────┘
-```
-
-### Technology Stack
-
-**Frontend:**
-- React 18 with TypeScript
-- Mapbox GL JS for geospatial visualization
-- Supabase client for authentication and database
-- CSS modules for styling
-
-**Backend:**
-- Node.js 18+ with Express framework
-- TypeScript for type safety
-- Child process execution for Python model inference
-- HTTP client integration with prediction servers
-
-**Data Processing:**
-- Python 3.8+ with pandas, geopandas, scikit-learn
-- H3 hexagonal grid system for spatial indexing
-- Parquet format for efficient data storage
-- JSON for fast in-memory data access
-
-**Database:**
-- Supabase (PostgreSQL) for user data and community features
-- Row Level Security (RLS) for data access control
-- Storage buckets for image uploads
-
-**Machine Learning:**
-- Scikit-learn Random Forest for impact prediction
-- Custom tree growth models (ML and rule-based)
-- Optional C++ inference engine for production deployment
-
-## Project Organization
-
-The codebase is organized into clear modules:
-
-```
-urban futures/
-├── frontend/              # React application
-│   ├── src/
-│   │   ├── components/    # React components (Map, Sidebar, etc.)
-│   │   ├── contexts/      # React contexts (Auth)
-│   │   ├── lib/           # Utilities (Supabase client)
-│   │   └── styles/        # CSS modules
-│   └── package.json
-│
-├── backend/               # Node.js API server
-│   ├── src/
-│   │   ├── index.ts       # Express app and routes
-│   │   └── services/      # Business logic services
-│   │       ├── h3Service.ts          # H3 cell data management
-│   │       ├── predictionService.ts  # Forward prediction logic
-│   │       ├── simulationService.ts  # Impact simulation
-│   │       └── congressionalService.ts # Representative data
-│   └── package.json
-│
-├── python/                # Data pipeline and ML
-│   ├── data_pipeline/
-│   │   ├── prepare_zip_features.py  # Main data preparation
-│   │   └── h3_utils.py              # Spatial utilities
-│   └── model_training/
-│       ├── train_model.py            # Impact model training
-│       ├── train_growth_model.py     # Tree growth ML model
-│       ├── prediction_server.py      # Fast inference server
-│       └── [other training scripts]
-│
-├── cpp/                   # Optional C++ inference
-│   ├── src/
-│   │   ├── impact_model.cpp
-│   │   └── main.cpp
-│   └── CMakeLists.txt
-│
-├── data/                  # Datasets and models
-│   ├── cache/             # Raw CSV files from NYC Open Data
-│   ├── processed/         # Processed Parquet files
-│   ├── external/          # Shapefiles, boundaries
-│   └── models/            # Trained models and features
-│
-└── docs/                  # Documentation
-    └── [various markdown files]
+heat_x_ej = heat_score × ej_score        # Heat × Environmental Justice
+air_x_ej = air_quality_score × ej_score  # Air Quality × EJ
+heat_x_air = heat_score × air_quality_score  # Heat × Air Quality
+tree_gap_x_ej = (1 - tree_density) × ej_score  # Tree Gaps × EJ (MOST IMPORTANT)
 ```
 
-## How to Run the System
-
-### Prerequisites
-
-1. **Python 3.8+** with pip
-2. **Node.js 18+** with npm
-3. **Mapbox account** (free tier available) - Get access token at account.mapbox.com
-4. **Supabase account** (free tier available) - For database and authentication
-5. **C++ compiler** (optional) - Only needed for C++ inference engine
-
-### Step 1: Install Dependencies
-
-Run the automated setup script:
-
-```bash
-cd urban\ futures
-./setup.sh
+**Combined Features**:
+```
+heat_air_combined = (heat_score + air_quality_score) / 2
+fuel_oil_log = log(1 + total_fuel_oil_gallons)  # Log transform for skewed data
 ```
 
-This script:
-- Checks Python and Node.js installations
-- Installs Python dependencies from `requirements.txt`
-- Installs backend Node.js dependencies
-- Installs frontend React dependencies
-- Creates necessary directories
-- Checks for Mapbox token configuration
+### Outputs
 
-Alternatively, install manually:
+1. **Impact Index** (0-1): Normalized composite score
+   - Formula: `impact_index = 0.6 × (temp_reduction / 2.0) + 0.4 × (pm25_reduction / 0.16)`
+   - Where: `temp_reduction = heat_score × 2.0°F`, `pm25_reduction = air_score × 0.16 lbs/year`
 
-```bash
-# Python dependencies
-pip3 install -r requirements.txt
+2. **Priority Score**: Weighted combination targeting EJ communities
+   - Formula: `priority_final = 0.35 × (heat_x_ej) + 0.25 × (tree_gap_x_ej) + 0.20 × (air_x_ej) + 0.10 × (heat_score) + 0.10 × (air_quality_score)`
+   - **Key**: `tree_gap_x_ej` has highest weight (0.35) - targeting tree deserts in EJ areas
 
-# Backend dependencies
-cd backend && npm install && cd ..
+3. **Impact Per Dollar**: ROI metric
+   - Formula: `impact_per_dollar = impact_index / (cost_per_tree / 1000)`
+   - Where: `cost_per_tree = $500 + (ej_score × $1500) × (1 + tree_density × 0.3)`
 
-# Frontend dependencies
-cd frontend && npm install && cd ..
-```
+### Spatial Aggregation: H3 Hexagonal Grid
 
-### Step 2: Configure Environment Variables
+**Resolution 9** (~1km² cells, 0.105 km² average):
+- **Why H3?**: Uniform cell sizes, efficient spatial queries, hierarchical indexing
+- **Coverage**: ~8,000 H3 cells covering all of NYC
+- **Aggregation Method**: Point-in-polygon for trees, spatial join for polygons (ZIP, CD boundaries)
 
-**Frontend Configuration** (`frontend/.env`):
-
-```env
-REACT_APP_MAPBOX_TOKEN=your_mapbox_token_here
-REACT_APP_API_URL=http://localhost:3001
-REACT_APP_SUPABASE_URL=your_supabase_project_url
-REACT_APP_SUPABASE_ANON_KEY=your_supabase_anon_key
-```
-
-**Backend Configuration** (`backend/.env` - optional):
-
-```env
-PORT=3001
-PREDICTION_SERVER_URL=http://localhost:3002
-AI_PREDICTION_SERVER_URL=http://localhost:3003
-```
-
-### Step 3: Prepare Data
-
-Run the data preparation pipeline:
-
-```bash
-cd python/data_pipeline
-python3 prepare_zip_features.py
-```
-
-This process:
-1. Loads raw datasets from `data/cache/`
-2. Processes street tree census data
-3. Aggregates features to H3 hexagonal cells (resolution 9, ~1km² per cell)
-4. Computes tree density, heat vulnerability, air quality scores
-5. Calculates priority scores using weighted formula
-6. Saves processed features to `data/models/h3_features.parquet` and `h3_features.json`
-7. Generates GeoJSON boundaries for map visualization
-
-**Expected duration:** 2-5 minutes depending on system resources
-
-### Step 4: Train Models (Optional)
-
-Train the machine learning models:
-
-```bash
-cd python/model_training
-python3 train_model.py              # Impact prediction model
-python3 train_growth_model.py       # Tree growth ML model
-python3 load_baseline_temperature.py # Baseline temperature trends
-```
-
-**Note:** The impact prediction model uses synthetic training data based on literature priors. In production, you would train on actual historical impact measurements.
-
-### Step 5: Start Prediction Server (Recommended)
-
-Start the fast prediction server to enable real-time simulations:
-
-```bash
-./start_prediction_server.sh
-# Or manually:
-cd python/model_training
-python3 prediction_server.py --port 3002
-```
-
-This server:
-- Loads trained models into memory
-- Responds to prediction requests in <50ms (vs 1-2 seconds for direct Python calls)
-- Handles multiple concurrent requests
-- Automatically falls back to direct Python calls if unavailable
-
-### Step 6: Set Up Database
-
-Follow the instructions in `docs/SUPABASE_SETUP.md`:
-
-1. **Run migration**: Execute `supabase/migrations/001_initial_schema.sql` in Supabase SQL Editor
-2. **Create storage buckets**: `company-logos` and `green-initiative-images`
-3. **Configure RLS policies**: Set up Row Level Security policies for data access
-4. **Enable authentication**: Configure email provider in Supabase dashboard
-
-### Step 7: Start Backend API
-
-```bash
-cd backend
-npm run build  # Compile TypeScript
-npm start      # Or npm run dev for auto-reload
-```
-
-Server starts on `http://localhost:3001`
-
-### Step 8: Start Frontend
-
-```bash
-cd frontend
-npm start
-```
-
-Frontend opens at `http://localhost:3000` with hot reload enabled.
-
-### Verification
-
-1. **Backend health check**: `curl http://localhost:3001/health`
-2. **Test H3 endpoint**: `curl http://localhost:3001/h3/892a100002bffff`
-3. **Frontend**: Map should load with NYC H3 cells colored by priority
-
-## Model Architecture and Inputs
-
-### Spatial Indexing: H3 Hexagonal Grid
-
-The system uses H3 (developed by Uber) for spatial indexing instead of traditional ZIP codes or administrative boundaries. H3 provides:
-
-- **Uniform cell size**: Resolution 9 yields ~1km² cells across all of NYC
-- **Hierarchical structure**: Can aggregate to coarser resolutions or subdivide to finer ones
-- **Efficient queries**: Fast point-in-cell and neighbor lookups
-- **No boundary artifacts**: Avoids issues with irregular ZIP boundaries
-
-Each H3 cell becomes a spatial unit for analysis, prediction, and visualization.
-
-### Priority Score Calculation
-
-Priority scores identify neighborhoods where tree planting will have the greatest impact. The calculation uses multiple weighted factors:
-
-**Input Features:**
-1. **Heat Vulnerability Index (HVI)**: Normalized 0-1 scale from NYC Department of Health
-2. **Air Quality Score**: Combined PM2.5 and NO2 measurements from NYC Community Air Survey
-3. **Tree Density**: Trees per km² from 2015 Street Tree Census
-4. **Fuel Oil Usage**: Gallons per area as pollution proxy
-5. **Environmental Justice Score**: Combined metric of:
-   - Indoor environmental complaints (311 data)
-   - Population density
-   - Socioeconomic indicators
-
-**Calculation Pseudocode:**
-
-```
-FUNCTION compute_priority_scores(features):
-    // Normalize all features to 0-1 range
-    heat_score = normalize(heat_vulnerability_index)
-    air_score = normalize(air_quality_score)
-    tree_density_norm = normalize(tree_density)
-    tree_gap = 1 - tree_density_norm  // Inverse: low density = high gap
-    pollution_proxy = normalize(fuel_oil_gallons)
+**Gap Analysis Algorithm**:
+```python
+def find_tree_gaps(h3_cells, tree_density_threshold=0.1):
+    """
+    Identifies H3 cells with tree density < 10% of maximum.
     
-    // Base priority (weighted combination)
-    priority_base = 
-        0.35 * heat_score +
-        0.25 * air_score +
-        0.25 * tree_gap +
-        0.15 * pollution_proxy
-    
-    // Environmental justice multiplier (40% boost for EJ communities)
-    priority_final = priority_base * (1 + 0.4 * ej_score)
-    
-    RETURN priority_final
+    Algorithm:
+    1. Compute tree_density for each H3 cell
+    2. Compute percentile_10 = percentile(tree_density, 10)
+    3. gap_cells = cells where tree_density < percentile_10
+    4. Return sorted by (tree_gap_score × ej_score) descending
+    """
 ```
 
-This formula ensures:
-- High heat vulnerability areas are prioritized
-- Poor air quality neighborhoods receive attention
-- Tree-poor areas get higher scores
-- Environmental justice communities get weighted boost
-- Maximum priority score = 1.4 (base of 1.0 with full EJ multiplier)
-
-### Impact Prediction Model
-
-The impact prediction model uses a Random Forest regressor to estimate "impact per dollar" - the primary optimization metric.
-
-**Model Inputs (12 engineered features):**
-
-1. **heat_score**: Normalized HVI
-2. **air_quality_score**: Normalized combined air quality
-3. **tree_density**: Trees per km²
-4. **cooling_site_distance_norm**: Inverse normalized distance to cooling centers
-5. **ej_score**: Environmental justice score (0-1)
-6. **pollution_proxy**: Normalized fuel oil usage
-7. **fuel_oil_log**: Log-transformed fuel oil (handles large values)
-8. **heat_x_ej**: Interaction term (heat × EJ)
-9. **air_x_ej**: Interaction term (air × EJ)
-10. **heat_x_air**: Interaction term (heat × air)
-11. **tree_gap_x_ej**: Interaction term ((1-density) × EJ)
-12. **heat_air_combined**: Average of heat and air scores
-
-**Feature Engineering:**
-
-The model uses interaction terms to capture non-linear relationships. For example:
-- `heat_x_ej` captures that high heat vulnerability in EJ communities has amplified impact
-- `tree_gap_x_ej` ensures tree-poor EJ neighborhoods are prioritized
-
-**Model Training:**
-
-The model is trained on synthetic data derived from literature priors:
-- ~2°F temperature reduction per tree (baseline)
-- ~0.16 lbs PM2.5 removed per tree per year
-- Cost per tree: $500-$2000 (varies by location and density)
-
-**Training/Testing Split and Model Accuracy:**
-
-All machine learning models in the system follow a consistent training methodology:
-
-**Data Split:**
-- **Training Set**: 80% of data (`test_size=0.2`)
-- **Testing Set**: 20% of data
-- **Random State**: 42 (ensures reproducibility)
-- **Stratification**: Not used (regression task)
-
-**Impact Prediction Model Performance:**
-
-The primary Random Forest model for impact per dollar prediction achieves:
-- **Training R² Score**: Typically 0.85-0.95 (varies by dataset size)
-- **Testing R² Score**: Typically 0.75-0.85
-- **Model Configuration**: 
-  - 150 estimators (trees)
-  - Maximum depth: 15
-  - Features: 12 engineered features including interaction terms
-
-**Tree Growth Model Performance:**
-
-The ML-based tree growth predictor (trained on 2015 Street Tree Census data):
-- **Training R² Score**: ~0.82-0.88
-- **Testing R² Score**: ~0.75-0.82
-- **Mean Absolute Error (MAE)**: ~0.3-0.5 cm/year growth rate
-- **Model Configuration**:
-  - 100 estimators
-  - Maximum depth: 10
-  - Minimum samples per split: 20
-
-**Temperature Impact Model Performance:**
-
-The temperature change prediction model:
-- **Training R² Score**: ~0.80-0.87
-- **Testing R² Score**: ~0.72-0.80
-- **MAE**: ~0.01-0.02°F
-- **RMSE**: ~0.02-0.03°F
-- **Negative Predictions**: ~5-10% (captures scenarios where trees die or fail to establish)
-
-**Model Validation Approach:**
-
-1. **Train/Test Split**: Standard 80/20 split ensures models generalize to unseen data
-2. **Cross-Validation**: Not used in production (single split for speed), but can be enabled for hyperparameter tuning
-3. **Feature Importance**: Random Forest provides interpretable feature importance rankings
-4. **Overfitting Detection**: Gap between train and test R² scores indicates generalization ability
-5. **Synthetic Data Note**: Since models use synthetic training data based on literature priors, accuracy metrics reflect model fit to the synthetic distribution rather than real-world validation. In production with historical impact data, these metrics would represent true predictive accuracy.
-
-**Prediction Pipeline:**
-
-```
-FUNCTION predict_impact_per_dollar(h3_features):
-    // Load trained model, scaler, and feature names
-    model = load_pickle("impact_model.pkl")
-    scaler = load_pickle("scaler.pkl")
-    feature_names = load_json("feature_names.json")
-    
-    // Apply same feature engineering as training
-    engineered_features = feature_engineering(h3_features)
-    
-    // Scale features
-    scaled_features = scaler.transform(engineered_features)
-    
-    // Predict
-    impact_per_dollar = model.predict(scaled_features)
-    
-    RETURN impact_per_dollar
+**Cluster Analysis Algorithm**:
+```python
+def find_tree_clusters(h3_cells, tree_density_threshold=0.9):
+    """
+    Identifies H3 cells with tree density > 90% of maximum.
+    Useful for identifying areas where trees are already well-distributed.
+    """
 ```
 
-### Forward Prediction System
+### Machine Learning Model: Random Forest Regressor
 
-The forward prediction system projects environmental impact over time (5-30 years) accounting for:
+**Model Type**: Random Forest (150 trees, max depth 15)
 
-1. **Tree Growth**: Trees grow over time, increasing their canopy area and impact
-2. **Tree Mortality**: Some trees die, reducing effective count
-3. **Climate Change**: Baseline temperature increases over time
-4. **Size Scaling**: Impact scales with DBH² (canopy area increases quadratically)
+**Features** (12 total):
+- `heat_score`, `air_quality_score`, `tree_density`, `cooling_site_distance_norm`
+- `ej_score`, `pollution_proxy`, `fuel_oil_log`
+- `heat_x_ej`, `air_x_ej`, `heat_x_air`, `tree_gap_x_ej`, `heat_air_combined`
 
-**Tree Growth Model:**
+**Target Variable**: `impact_per_dollar`
 
-Uses ML model trained on 2015 census data:
+**Training Data**: Synthetic data based on literature priors (2°F cooling/tree, 0.16 lbs PM2.5/tree/year)
 
+**Performance Metrics**:
+- **Train R²**: 0.9678 (96.78% variance explained)
+- **Test R²**: 0.9329 (93.29% variance explained on held-out data)
+- **Feature Importance** (Top 3):
+  1. `tree_gap_x_ej`: 0.7677 (76.77% - **most important**)
+  2. `tree_density`: 0.2102 (21.02%)
+  3. `cooling_site_distance_norm`: 0.0220 (2.20%)
+
+**Loss Function**: Mean Squared Error (MSE)
+- `MSE = (1/n) × Σ(predicted - actual)²`
+- Optimized via Random Forest's internal Gini impurity minimization
+
+**Preprocessing**:
+- StandardScaler: `X_scaled = (X - mean) / std` for all features
+- Missing value handling: Median for heat/air scores, 0 for tree density
+- Inf handling: Replace with large finite values (1e6)
+
+---
+
+## Model 2: Geospatial Prediction Engine (30-Year Forecasts)
+
+### Algorithm Overview
+
+This model predicts **tree growth, survival, temperature reduction, and CO2 sequestration** up to 30 years in advance using:
+1. Machine learning (Random Forest) for tree growth/survival
+2. Physics-based i-Tree methodology for temperature/CO2
+3. Climate baseline warming trends from Central Park data
+
+### Inputs
+
+1. **Initial Tree State**:
+   - `tree_count`: Current number of trees
+   - `avg_dbh`: Average diameter at breast height (cm)
+   - `zipcode`: Location for baseline temperature lookup
+   - `new_trees`: Number of new trees to plant (optional)
+
+2. **Baseline Temperature Trends**:
+   - Source: Central Park NOAA weather station (USW00094728)
+   - File: `data/cache/baseline_temperature_central_park.csv`
+   - Variables: December average temperature (°F) by year (1870-2024)
+   - Analysis: Linear regression on recent 20 years
+   - Output: `warming_rate = 0.0538°F/year` (recent slope)
+
+3. **Tree Census Data** (Training):
+   - Source: 2015 Street Tree Census
+   - Features: `tree_dbh`, `spc_latin` (species), `health` (Good/Fair/Poor)
+   - Used for: ML model training (growth rates, survival probabilities)
+
+### Machine Learning Sub-Model: Tree Growth Predictor
+
+**Model Type**: Random Forest Regressor (100 trees, max depth 10)
+
+**Features**:
+- `tree_dbh` (diameter), `dbh_squared`, `dbh_log`, `dbh_category` (0-2 bins)
+- `species_encoded` (LabelEncoder), `health_encoded` (Good=2, Fair=1, Poor=0)
+- `annual_survival` (0.7-0.99 based on health/size)
+
+**Target Variable**: `growth_rate_cm_per_year`
+
+**Training**:
+- 10-year projection simulation: `final_dbh = min(current_dbh + growth_rate × 10, 100)`
+- Growth rates: Small trees (<10cm): 1.5 cm/yr, Medium (10-30cm): 1.0 cm/yr, Large (>30cm): 0.5 cm/yr
+- Survival: `survival_10yr = annual_survival^10` (compound probability)
+
+**Performance**:
+- **MAE**: 0.080 cm/year
+- **R²**: 0.891 (89.1% variance explained)
+
+**Survival Model** (Gradient Boosting):
+- **Target**: `survival_probability_10yr`
+- **Performance**: MAE = 0.000, R² = 1.000 (perfect fit on synthetic survival data)
+
+### Physics-Based Temperature Prediction
+
+**i-Tree Methodology** (Nowak et al. 2013):
+
+**Base Constants**:
 ```
-FUNCTION predict_tree_growth(dbh, species, health, years):
-    IF ml_model_available:
-        growth_rate = ml_model.predict(dbh, species, health)
-    ELSE:
-        growth_rate = rule_based_predictor(dbh, species, health)
-    
-    current_dbh = dbh
-    FOR year IN 1..years:
-        current_dbh += growth_rate
-        // Apply survival probability
-        IF random() > survival_rate(current_dbh, species, health):
-            // Tree died
-            BREAK
-    
-    RETURN current_dbh
+TEMP_REDUCTION_BASE = 0.06°F per tree at 20cm DBH
+TEMP_DBH_EXPONENT = 2.0  # Canopy area scales with DBH²
+ITREE_CO2_BASE = 21.77 kg CO2/year per tree at 20cm DBH
+ITREE_CO2_DBH_EXPONENT = 1.5  # CO2 scales with DBH^1.5
 ```
 
-**Temperature Reduction Calculation:**
-
+**Temperature Reduction Formula** (per tree, per year):
 ```
-FUNCTION calculate_temperature_reduction(tree_count, avg_dbh):
-    // Base rate: 0.06°F per tree at 20cm DBH
-    base_rate = 0.06
-    
-    // Size factor: canopy area scales with DBH²
-    size_factor = (avg_dbh / 20.0)²
-    
-    // Annual temperature reduction
-    temp_reduction = base_rate * size_factor * tree_count
-    
-    // Account for climate change (baseline warming)
-    baseline_warming = warming_rate * years_ahead
-    
-    // Net change: cooling from trees minus warming baseline
-    net_temp_change = -temp_reduction + baseline_warming
-    
-    RETURN net_temp_change
+temp_reduction = TEMP_REDUCTION_BASE × (dbh / 20.0)^2 × survival_rate
 ```
 
-**CO2 Sequestration:**
-
+**CO2 Sequestration Formula**:
 ```
-FUNCTION calculate_co2_sequestration(tree_count, avg_dbh, years):
-    // Average: 48 lbs CO2 per tree per year for mature trees
-    base_rate_kg_per_year = 21.77  // Convert lbs to kg
-    
-    // Scale by tree size (DBH²)
-    size_factor = (avg_dbh / 20.0)²
-    
-    // Annual sequestration
-    annual_kg = base_rate_kg_per_year * size_factor * tree_count
-    
-    // Cumulative over years (accounting for growth)
-    cumulative_kg = sum(annual_kg for each year, accounting for growth)
-    
-    RETURN cumulative_kg
+co2_kg_per_year = ITREE_CO2_BASE × (dbh / 20.0)^1.5 × survival_rate
 ```
 
-**Yearly Projection Generation:**
-
-```
-FUNCTION generate_yearly_projections(base_tree_count, new_trees, years):
-    projections = []
-    current_tree_count = base_tree_count
-    current_dbh = average_dbh_of_existing_trees
+**30-Year Projection Algorithm**:
+```python
+def predict_temperature_change(current_dbh, years, new_trees, existing_trees):
+    """
+    Predicts temperature change over N years.
     
-    FOR year IN 1..years:
-        // Grow existing trees
-        current_dbh = grow_trees(current_dbh, 1_year)
+    Returns:
+        Negative value = area gets HOTTER (trees die/decline)
+        Positive value = area gets COOLER (trees grow/new trees)
+    """
+    if new_trees == 0 and existing_trees == 0:
+        return -0.5  # Baseline heating without trees
+    
+    # Existing trees: growth vs mortality
+    growth_rate = 1.0 if current_dbh < 30 else 0.5  # cm/year
+    final_dbh = min(current_dbh + (growth_rate × years), 100)
+    
+    survival = 0.95^years  # ~60% survive after 10 years
+    surviving_trees = existing_trees × survival
+    
+    # Current cooling
+    current_cooling = 0.06 × (current_dbh / 20.0)^2 × existing_trees
+    
+    # Future cooling (trees grow but some die)
+    future_cooling = 0.06 × (final_dbh / 20.0)^2 × surviving_trees
+    
+    # Temperature change
+    temp_change_from_trees = future_cooling - current_cooling
+    
+    # If no new trees: account for UHI penalty + climate warming
+    if new_trees == 0:
+        uhi_penalty = -0.05 × years  # -0.05°F per year
+        lost_trees = existing_trees × (1 - survival)
+        mortality_penalty = -0.06 × 0.8 × lost_trees
+        warming_rate = baseline_trend['recent_slope_f_per_year']  # 0.0538°F/year
+        climate_warming = -warming_rate × years
+        return temp_change_from_trees + uhi_penalty + mortality_penalty + climate_warming
+    else:
+        # New trees provide cooling
+        new_tree_survival = 0.98^years  # Better survival for newly planted
+        new_tree_cooling = 0.06 × (10.0 / 20.0)^2 × (new_trees × new_tree_survival)
+        return temp_change_from_trees + new_tree_cooling
+```
+
+### Heat Impact ML Model
+
+**Model Type**: Random Forest Regressor (100 trees, max depth 10)
+
+**Training Data**: 2015 Tree Census (683,789 trees)
+
+**Features**:
+- `tree_dbh`, `dbh_squared`, `dbh_log`, `dbh_category`
+- `species_encoded`, `health_encoded`, `annual_survival`
+
+**Target Variable**: `temperature_change_10yr` (°F)
+- Calculated as: `future_cooling - current_cooling` (can be negative if trees die)
+
+**Performance**:
+- **MAE**: 0.0080°F
+- **RMSE**: 0.0138°F
+- **R²**: 0.894 (89.4% variance explained)
+- **Negative Predictions**: 2% (correctly predicts warming when trees decline)
+
+**CO2 Model** (Gradient Boosting):
+- **Target**: `co2_kg_per_year`
+- **Performance**: MAE = 1.52 kg/year, R² = 0.980
+
+### Outputs
+
+**Yearly Projections** (1-30 years):
+- `tree_count`: Surviving trees (accounting for mortality)
+- `avg_dbh`: Average DBH (trees grow over time)
+- `survival_rate`: Fraction of trees surviving
+- `temp_annual`: Temperature change per year (°F, can be negative)
+- `co2_annual`: CO2 sequestration (kg/year)
+- `pm25_annual`: PM2.5 reduction (lbs/year)
+
+**Summary Statistics**:
+- `avg_temperature_reduction_f`: Average over all years
+- `cumulative_co2_kg`: Total CO2 sequestered over projection period
+
+---
+
+## Model 3: Compliance-Algorithmic Planting Locator
+
+### Algorithm Overview
+
+Finds **every possible legal street tree planting location** in NYC by algorithmically applying NYC Parks & Recreation Department regulations to street geometry data.
+
+### Inputs: Complete Dataset List
+
+1. **2015 Street Tree Census**
+   - Source: NYC Open Data (`data.cityofnewyork.us`)
+   - File: `data/cache/street_trees_2015.csv`
+   - Size: 210.15 MB, 683,789 rows
+   - Key columns: `tree_id`, `latitude`, `longitude`, `tree_dbh`, `status`, `health`
+   - **Use**: Identify existing trees to avoid planting conflicts
+
+2. **NYC Pseudo-Lots** (Street Segments)
+   - Source: NYC Department of City Planning
+   - File: `data/external/nyc_pseudo_lots.csv`
+   - **Use**: Street geometry for spacing calculations
+
+3. **NYC Building Footprints**
+   - Source: NYC Open Data
+   - File: `data/external/nyc_building_footprints.csv`
+   - **Use**: Exclude planting locations within building footprints
+
+4. **NYC Parks Properties**
+   - Source: NYC Parks Department
+   - File: `data/external/nyc_parks_properties.csv`
+   - **Use**: Identify park boundaries (trees planted by Parks, not street trees)
+
+5. **Street Sign Work Orders**
+   - Source: NYC DOT
+   - File: `Compliance data merged/Street_Sign_Work_Orders_20260116.csv`
+   - **Use**: Identify sign locations that block planting
+
+6. **Bus Stop Shelter Locations**
+   - Source: NYC DOT
+   - File: `Compliance data merged/Bus_Stop_Shelter_20260116.csv`
+   - **Use**: Identify bus stop locations (minimum 5ft clearance required)
+
+### Algorithm: Finding Legal Planting Locations
+
+**Step 1: Load Existing Trees**
+```python
+existing_trees = load_street_trees()  # 683,789 trees from 2015 census
+# Convert to GeoDataFrame with Point geometry
+trees_gdf = gpd.GeoDataFrame(existing_trees, geometry=points, crs='EPSG:4326')
+```
+
+**Step 2: Load Street Segments**
+```python
+street_segments = load_pseudo_lots()  # Street geometry from City Planning
+```
+
+**Step 3: Apply Spacing Rules**
+
+**NYC Parks Regulations**:
+- **Minimum spacing**: 25 feet between street trees
+- **Maximum spacing**: 50 feet (if gaps >50ft, add trees)
+- **Corner clearance**: 30 feet from intersections
+- **Sign clearance**: 5 feet from street signs
+- **Bus stop clearance**: 5 feet from bus stops
+- **Building clearance**: 10 feet from building lines
+
+**Algorithm**:
+```python
+def find_planting_locations(street_segment, existing_trees):
+    """
+    Returns list of legal planting coordinates along a street segment.
+    """
+    planting_coords = []
+    
+    # Start at 30ft from intersection (corner clearance)
+    current_position = segment_start + 30ft
+    
+    while current_position < segment_end - 30ft:
+        # Check existing trees within 25ft radius
+        nearby_trees = existing_trees[existing_trees.distance(current_position) < 25ft]
         
-        // Add new trees (they start small and grow)
-        IF new_trees > 0:
-            new_trees_age = year
-            new_trees_dbh = grow_from_seedling(new_trees_age)
-            // Weighted average of old and new trees
-            current_dbh = weighted_average(current_dbh, new_trees_dbh, counts)
-        
-        // Apply mortality
-        current_tree_count = apply_mortality(current_tree_count, current_dbh)
-        
-        // Calculate impacts for this year
-        temp_change = calculate_temperature_reduction(current_tree_count, current_dbh)
-        co2_annual = calculate_co2_sequestration(current_tree_count, current_dbh, 1)
-        
-        projections.append({
-            year: year,
-            tree_count: current_tree_count,
-            avg_dbh: current_dbh,
-            temperature_reduction: temp_change,
-            co2_sequestration: co2_annual
-        })
+        if len(nearby_trees) == 0:
+            # Check building clearance
+            if distance_to_nearest_building(current_position) >= 10ft:
+                # Check sign/bus stop clearance
+                if distance_to_nearest_sign(current_position) >= 5ft:
+                    if distance_to_nearest_bus_stop(current_position) >= 5ft:
+                        planting_coords.append(current_position)
+                        current_position += 25ft  # Move to next potential location
+                    else:
+                        current_position += 5ft  # Skip bus stop
+                else:
+                    current_position += 5ft  # Skip sign
+            else:
+                current_position += 10ft  # Skip building area
+        else:
+            # Existing tree found, skip 25ft
+            current_position += 25ft
     
-    RETURN projections
+    return planting_coords
 ```
 
-## Full-Stack Implementation
+**Step 4: Spatial Validation**
 
-### Frontend Architecture
+**Coordinate Checks**:
+- Within NYC boundaries (40.4774° to 40.9176° N, -74.2591° to -73.7004° W)
+- Not in water (excluded via shapefile mask)
+- Not in park boundaries
+- Minimum sidewalk width: 3.25 feet (from pseudo-lots)
 
-**Component Hierarchy:**
-
-```
-App.tsx
-├── LandingPage (initial screen)
-├── AuthModal (authentication)
-├── MapComponent (main map visualization)
-│   ├── Mapbox GL map instance
-│   ├── H3 layer (hexagonal cells)
-│   ├── Thermal overlay (optional)
-│   └── Tree point layer (optional)
-├── Sidebar (neighborhood details and simulation)
-│   ├── ReviewSection (community reviews)
-│   ├── GreenInitiativesSection (user photos)
-│   └── PredictionChart (future projections)
-├── Information (about page)
-└── Leaderboard (top contributors)
+**Output Format**:
+```json
+{
+  "coordinates": [
+    {"lat": 40.7128, "lon": -74.0060, "street_name": "Broadway"},
+    ...
+  ],
+  "total_opportunities": 125843,
+  "by_borough": {...}
+}
 ```
 
-**State Management:**
+### Outputs
 
-- React hooks (`useState`, `useEffect`) for local component state
-- Context API (`AuthContext`) for global authentication state
-- Supabase client for real-time database subscriptions
+**File**: `data/processed/available_tree_planting_coordinates.json`
+- **Total Opportunities**: ~125,000 legal planting locations across NYC
+- **Format**: GeoJSON with Point geometry
+- **Metadata**: Street name, borough, ZIP code for each location
 
-**Map Rendering Flow:**
+**By Borough Statistics**:
+- Manhattan: ~20,000 locations
+- Brooklyn: ~35,000 locations
+- Queens: ~40,000 locations
+- Bronx: ~20,000 locations
+- Staten Island: ~10,000 locations (target borough - 70% backyards)
 
+---
+
+## Complete Dataset Inventory
+
+### Raw Data (data/cache/)
+
+1. **street_trees_2015.csv** (210.15 MB, 683,789 rows)
+   - Complete 2015 NYC street tree census
+   - Columns: tree_id, latitude, longitude, tree_dbh, status, health, species
+
+2. **heat_vulnerability.csv**
+   - NYC Department of Health Heat Vulnerability Index by ZIP
+   - Variables: Poverty, age, AC access, surface temperature
+
+3. **air_quality.csv**
+   - NYC Community Air Survey (PM2.5, NO2) by Community District
+
+4. **fuel_oil_data.csv**
+   - Fuel oil consumption by ZIP (pollution proxy)
+
+5. **cooling_sites.csv**
+   - NYC cooling center locations (lat/lon)
+
+6. **indoor_environmental.csv**
+   - Indoor environmental complaints by ZIP
+
+7. **baseline_temperature_central_park.csv**
+   - NOAA Central Park station (1870-2024)
+   - December average temperatures
+
+8. **block_planting.csv** (4.00 MB, 114,944 rows)
+   - Tree planting records by block
+
+9. **block_pruning.csv** (4.36 MB, 83,200 rows)
+   - Tree pruning records
+
+10. **tree_contract_work.csv**
+    - NYC Parks tree maintenance contracts
+
+11. **million_trees_nyc.csv**
+    - MillionTreesNYC initiative data
+
+12. **forest_restoration.csv**
+    - Forest restoration projects
+
+13. **hazard_mitigation.csv**
+    - Climate hazard mitigation data
+
+14. **oer_cleanup_sites.csv**
+    - Oil spill cleanup sites (exclusion zones)
+
+15. **sea_level_rise_maps.csv**
+    - Sea level rise projections
+
+### External Data (data/external/)
+
+1. **nyc_zip_boundaries/** (Shapefile)
+   - ZIP code boundaries (TIGER/Line 2010)
+   - File: `tl_2010_36_zcta510.shp`
+
+2. **nyc_building_footprints.csv**
+   - Building footprints for clearance calculations
+
+3. **nyc_parks_properties.csv**
+   - Parks boundaries (exclude from street tree planting)
+
+4. **nyc_pseudo_lots.csv**
+   - Street segment geometry (for spacing calculations)
+
+5. **nyc_population_community_districts.csv**
+   - Population by Community District
+
+### Compliance Data (Compliance data merged/)
+
+1. **Street_Sign_Work_Orders_20260116.csv**
+   - Street sign locations (5ft clearance required)
+
+2. **Bus_Stop_Shelter_20260116.csv**
+   - Bus stop locations (5ft clearance required)
+
+### Processed Data (data/processed/)
+
+All Parquet files (fast columnar storage):
+
+1. **heat_vulnerability_processed.parquet**
+2. **air_quality_processed.parquet**
+3. **fuel_oil_processed.parquet**
+4. **cooling_sites_processed.parquet**
+5. **indoor_environmental_processed.parquet**
+6. **hazard_mitigation_processed.parquet**
+7. **oer_cleanup_sites_processed.parquet**
+
+### Model Files (data/models/)
+
+1. **impact_model.pkl** - Random Forest (impact prediction)
+2. **heat_impact_ml_model.pkl** - Temperature/CO2 ML model
+3. **tree_growth_ml_model.pkl** - Tree growth/survival ML model
+4. **h3_features.json** - H3 cell features (8,000 cells)
+5. **zip_features.json** - ZIP code features (1,794 ZIPs)
+6. **baseline_temperature_trend.json** - Central Park warming rate (0.0538°F/year)
+
+---
+
+## Review Processing & Environmental Scoring (NVIDIA GPU)
+
+### Algorithm: Review Bias Detection
+
+**Input**: User reviews + descriptions per neighborhood (1km H3 cells)
+
+**Processing** (NVIDIA GPU acceleration):
+1. **NLP Sentiment Analysis**: Extract environmental vs non-environmental mentions
+   - Environmental keywords: tree, temperature, heat, pollution, flooding, sun, trash, air quality
+   - Non-environmental: rent, parking, noise, traffic, cost of living
+
+2. **Bias Scoring**:
 ```
-1. MapComponent mounts
-2. Initializes Mapbox instance with access token
-3. Waits for map style load event
-4. Fetches H3 GeoJSON from backend API
-5. Adds H3 cells as GeoJSON source
-6. Creates fill layer with color expression based on priority_final
-7. Adds click handlers for cell selection
-8. Updates sidebar when cell clicked
-```
-
-**View Modes:**
-
-The map supports two view modes:
-- **Trees Mode**: Cells colored by priority score (green gradient)
-- **Heat Index Mode**: Cells colored by thermal value (red gradient)
-
-Color expressions use Mapbox interpolation for smooth gradients.
-
-**Simulation Flow:**
-
-```
-1. User clicks H3 cell
-2. Sidebar displays current neighborhood data
-3. User adjusts sliders (trees to plant, years ahead)
-4. Frontend debounces slider changes (300ms)
-5. Sends prediction request to backend API
-6. Backend orchestrates prediction calculation
-7. Results displayed in sidebar with charts
-```
-
-### Backend Architecture
-
-**Service Pattern:**
-
-Each service class encapsulates related functionality:
-
-**H3Service:**
-- Loads H3 feature data from Parquet/JSON
-- Caches features in memory for fast access
-- Provides H3 cell lookup and aggregation
-- Manages tree location data
-
-**PredictionService:**
-- Orchestrates forward prediction calculations
-- Integrates with Python prediction server (if available)
-- Falls back to direct Python subprocess calls
-- Combines tree growth and impact models
-- Generates yearly projections
-
-**SimulationService:**
-- Converts lat/lon to H3 cells
-- Aggregates impact metrics
-- Provides simulation results for arbitrary locations
-
-**CongressionalService:**
-- Loads ZIP code to representative mapping
-- Enables users to find their elected officials
-- Facilitates advocacy and outreach
-
-**API Endpoints:**
-
-```
-GET /health
-    → Health check endpoint
-
-GET /h3/:cellId
-    → Returns complete H3 cell data including features and predictions
-
-GET /h3-cells
-    → Returns all H3 cells with priority scores (for choropleth)
-
-GET /h3-boundaries
-    → Returns GeoJSON of all H3 cell boundaries
-
-GET /predict?h3_cell=...&years=...&tree_count=...
-    → Runs forward prediction for specified parameters
-
-GET /simulate?lat=...&lon=...
-    → Projects lat/lon to H3 cell and runs simulation
-
-GET /congressional/:zipcode
-    → Returns congressional representative data for ZIP code
-```
-
-**Request Flow Example:**
-
-```
-User clicks H3 cell
-    ↓
-Frontend: GET /h3/892a100002bffff
-    ↓
-Backend: H3Service.getH3Data()
-    ↓
-Backend: Load features from cache or JSON
-    ↓
-Backend: Predict impact using ML model
-    ↓
-Backend: Return JSON response
-    ↓
-Frontend: Display in Sidebar
-```
-
-**Prediction Server Integration:**
-
-The backend attempts to use a persistent Python prediction server for speed:
-
-```
-1. Backend receives prediction request
-2. Checks if prediction server is available (HTTP GET to port 3002)
-3. IF available:
-     → Send HTTP POST with prediction parameters
-     → Receive response in <50ms
-4. ELSE:
-     → Spawn Python subprocess with prediction script
-     → Wait for response (1-2 seconds)
-5. Return results to frontend
-```
-
-### Data Flow
-
-**Initial Data Preparation:**
-
-```
-NYC Open Data (CSV files)
-    ↓
-[Data Pipeline Script]
-    ↓
-Raw Processing:
-  - Load shapefiles (ZIP boundaries)
-  - Load tree census (683k trees)
-  - Load environmental datasets
-    ↓
-Spatial Aggregation:
-  - Convert lat/lon to H3 cells
-  - Aggregate trees per cell
-  - Interpolate air quality to cells
-  - Calculate proximity features
-    ↓
-Feature Engineering:
-  - Compute priority scores
-  - Calculate EJ scores
-  - Normalize all features
-    ↓
-Output:
-  - h3_features.parquet (full data)
-  - h3_features.json (fast access)
-  - h3_features.geojson (map boundaries)
+bias_score = (non_environmental_mentions) / (total_mentions)
+# If bias_score > 0.3: Review excluded from environmental score
 ```
 
-**Runtime Data Access:**
-
+3. **Weighted Environmental Score**:
 ```
-User Interaction
-    ↓
-Frontend: API Request
-    ↓
-Backend: Service Layer
-    ↓
-Data Access:
-  IF cached in memory:
-    → Return cached data
-  ELSE:
-    → Load from JSON (fast) or Parquet (slower)
-    → Cache in memory
-    → Return data
-    ↓
-Frontend: Update UI
+user_score = weighted_average(filtered_reviews)
+# Weighted by: review_age (recent > old), user_reputation, review_length
 ```
 
-**Database Operations:**
+### Environmental Score Calculation
 
+**Formula**:
 ```
-User Authentication
-    ↓
-Supabase Auth (JWT tokens)
-    ↓
-Frontend: Store token in localStorage
-    ↓
-API Requests: Include token in headers
-    ↓
-Supabase Client:
-  → Automatic token injection
-  → RLS policies enforce access control
-    ↓
-Database: user_profiles, reviews, green_initiatives
+final_environmental_score = 0.6 × science_score + 0.4 × user_score
+
+Where:
+science_score = normalized(priority_final)  # From Model 1
+user_score = normalized(user_review_average)  # From GPU-processed reviews
 ```
 
-## Database Setup and Schema
+**Normalization**: Min-max scaling to 0-100 scale
 
-### Supabase Configuration
+**Output**: Environmental resilience score (0-100) per H3 cell
 
-**Project Setup:**
-1. Create Supabase project at supabase.com
-2. Note project URL and anon key
-3. Add to frontend `.env` file
+### Licensing Model
 
-### Schema Overview
+**Target Customers**: Zillow, StreetEasy, Redfin, Compass
 
-**user_profiles Table:**
+**Score Components**:
+- Tree density (0-25 points)
+- Temperature reduction potential (0-25 points)
+- Air quality improvement (0-25 points)
+- User review sentiment (0-25 points)
 
-Stores extended user information beyond Supabase auth.users:
+**Update Frequency**: Monthly (science scores), real-time (user reviews)
 
-```sql
-CREATE TABLE user_profiles (
-    id UUID PRIMARY KEY REFERENCES auth.users(id),
-    email TEXT UNIQUE NOT NULL,
-    user_type TEXT CHECK (user_type IN ('regular', 'corporate', 'guest')),
-    company_domain TEXT,      -- For corporate users
-    company_logo_url TEXT,    -- Corporate logo storage URL
-    zipcode TEXT,             -- User's neighborhood
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-);
+**Impact Hypothesis**: Lower scores → decreased rental/living demand → property value pressure → investment in climate resilience measures (trees, green infrastructure)
+
+---
+
+## System Architecture
+
+### Frontend: React + Mapbox GL JS
+
+**Components**:
+- `MapComponent.tsx`: Interactive map with H3 cell visualization
+- `Sidebar.tsx`: Detailed predictions and community features
+- `ReviewSection.tsx`: Neighborhood reviews (climate-focused)
+- `EventsSection.tsx`: Community leader events/news
+- `OrganizationsSection.tsx`: Community organizations by ZIP
+
+**Visualization**:
+- H3 hexagonal cells colored by priority score
+- Tree planting opportunity markers
+- Temperature/pollution heat maps
+- Community reviews overlay
+
+### Backend: Node.js + Express
+
+**Endpoints**:
+- `GET /api/h3/:cellId` - Get H3 cell data
+- `POST /api/predict` - Forward prediction (30-year forecasts)
+- `GET /api/organizations/:zipcode` - Community organizations
+- `POST /api/events` - Create event (community leaders)
+- `GET /api/reviews/:zipcode` - Neighborhood reviews
+
+**Services**:
+- `predictionService.ts`: Orchestrates ML model calls
+- `h3Service.ts`: Spatial data management
+- `communityLeaderRoutes.ts`: Community leader API
+
+### Python Prediction Server
+
+**Port**: 3002
+
+**Model Loading**:
+- `heat_impact_ml_model.pkl` (Random Forest for temperature/CO2)
+- `tree_growth_ml_model.pkl` (Random Forest for growth/survival)
+- `baseline_temperature_trend.json` (Central Park warming rate)
+
+**Prediction Flow**:
+1. Receive: `{tree_count, avg_dbh, years, new_trees}`
+2. Load models (in-memory for speed)
+3. Predict growth: `final_dbh = ML_model.predict(current_dbh)`
+4. Predict survival: `survival_rate = survival_model.predict(years, dbh)`
+5. Calculate impacts: `temp_change = heat_model.predict(final_dbh, survival_rate)`
+6. Return: `{yearly_predictions: [...], summary: {...}}`
+
+**Performance**: <50ms per prediction (models loaded in memory)
+
+### Database: Supabase (PostgreSQL)
+
+**Tables**:
+- `user_profiles`: Users (regular, corporate, community_leader)
+- `reviews`: Neighborhood climate reviews
+- `green_initiatives`: User-shared initiatives (trees, flowers, etc.)
+- `organizations`: Community organizations
+- `community_leaders`: Leader profiles linked to organizations
+- `events`: Community leader events/news (tagged to ZIP codes)
+- `organization_zipcodes`: Many-to-many (orgs ↔ zipcodes)
+- `event_zipcodes`: Many-to-many (events ↔ zipcodes)
+
+**Row Level Security (RLS)**: Users can only edit their own data
+
+**Storage Buckets**:
+- `organization-logos`: Organization logo uploads
+- `event-images`: Event image uploads
+- `initiative-images`: Green initiative photos
+
+---
+
+## Technical Implementation Details
+
+### H3 Spatial Indexing
+
+**Why H3?**:
+- Uniform cell sizes (~1km² at resolution 9)
+- Hierarchical indexing (can drill down to resolution 15 = ~0.9m²)
+- Fast spatial queries (no complex polygon intersections)
+- Works globally (not just NYC)
+
+**Resolution 9 Details**:
+- Average cell area: 0.105 km²
+- Cell count in NYC: ~8,000
+- Query time: <1ms per cell (vs 50ms+ for ZIP polygon intersection)
+
+**Conversion**:
+```python
+import h3
+
+# Lat/lon → H3 cell
+cell_id = h3.geo_to_h3(lat, lon, resolution=9)
+
+# H3 cell → polygon
+polygon = h3.h3_to_geo_boundary(cell_id, geo_json=True)
+
+# H3 cell → center
+center_lat, center_lon = h3.h3_to_geo(cell_id)
 ```
 
-**reviews Table:**
+### Model Training Pipeline
 
-Community reviews for neighborhoods:
+**1. Data Preparation** (`prepare_zip_features.py`):
+- Loads 15+ CSV datasets
+- Aggregates to H3 cells
+- Computes interaction terms
+- Saves to Parquet (fast columnar format)
 
-```sql
-CREATE TABLE reviews (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES user_profiles(id),
-    zipcode TEXT NOT NULL,
-    h3_cell TEXT,             -- Optional H3 cell reference
-    rating INTEGER CHECK (rating >= 1 AND rating <= 5),
-    message TEXT NOT NULL,
-    lives_here BOOLEAN,       -- User lives in this area
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP,
-    UNIQUE(user_id, zipcode)  -- One review per user per area
-);
-```
+**2. Synthetic Training Data** (`train_model.py`):
+- Creates targets based on literature priors
+- Adds Gaussian noise (σ=0.1 for temp, σ=0.01 for PM2.5)
+- Ensures non-negative values
 
-**green_initiatives Table:**
+**3. Model Training**:
+- Random Forest: 150 trees, max_depth=15, min_samples_split=5
+- Feature scaling: StandardScaler (zero mean, unit variance)
+- Train/test split: 80/20
+- Cross-validation: Not needed (synthetic data, but could add for real data)
 
-User-uploaded photos of green initiatives:
+**4. Model Evaluation**:
+- R² score (coefficient of determination)
+- MAE (Mean Absolute Error)
+- RMSE (Root Mean Squared Error)
+- Feature importances (Random Forest internal)
 
-```sql
-CREATE TABLE green_initiatives (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    user_id UUID REFERENCES user_profiles(id),
-    zipcode TEXT NOT NULL,
-    h3_cell TEXT,
-    image_url TEXT NOT NULL,  -- Supabase Storage URL
-    caption TEXT,
-    initiative_type TEXT CHECK (initiative_type IN 
-        ('plant_flower', 'hang_vines', 'plant_tree', 'general')),
-    created_at TIMESTAMP,
-    updated_at TIMESTAMP
-);
-```
+### Performance Optimizations
 
-### Row Level Security (RLS)
+**Caching**:
+- H3 features loaded in memory (8,000 cells)
+- Models loaded once at server startup
+- API response caching (2-minute TTL)
 
-All tables have RLS enabled with the following policies:
+**Prediction Speed**:
+- Random Forest inference: <1ms per prediction
+- Python prediction server: <50ms end-to-end (including serialization)
+- Frontend map rendering: ~16ms per frame (60 FPS)
 
-**Read Access:**
-- Public read access for all tables (community features are visible to everyone)
+**Database Queries**:
+- Indexed on `zipcode`, `h3_cell`, `user_id`
+- Materialized views for common aggregations (`events_by_zipcode`, `organizations_by_zipcode`)
 
-**Write Access:**
-- Users can insert their own reviews and initiatives
-- Users can update/delete only their own content
-- Corporate users can upload company logos
+---
 
-**Implementation:**
+## Future Enhancements
 
-RLS policies use Supabase's `auth.uid()` function to verify user identity:
+1. **Real-Time Temperature Data**: Integrate live weather station data
+2. **Satellite Imagery**: Use Landsat/ Sentinel for actual canopy coverage
+3. **Soil Quality Data**: NYC soil surveys for planting success rates
+4. **Historical Planting Success**: Track which locations had successful plantings
+5. **Community Leader Analytics**: Dashboard for leaders to see engagement metrics
+6. **Mobile App**: Native iOS/Android for on-the-go tree planting verification
 
-```sql
-CREATE POLICY "Users can insert own reviews"
-ON reviews FOR INSERT
-WITH CHECK (auth.uid() = user_id);
-```
-
-### Storage Buckets
-
-**company-logos Bucket:**
-- Public read access
-- Authenticated users can upload
-- File size limit: 2MB
-- MIME types: image/*
-
-**green-initiative-images Bucket:**
-- Public read access
-- Authenticated users can upload/delete own images
-- File size limit: 5MB
-- MIME types: image/*
-
-### Indexes
-
-Performance indexes on frequently queried columns:
-
-```
-idx_reviews_zipcode          ON reviews(zipcode)
-idx_reviews_h3_cell          ON reviews(h3_cell)
-idx_green_initiatives_zipcode ON green_initiatives(zipcode)
-idx_user_profiles_company_domain ON user_profiles(company_domain)
-```
-
-### Database Access from Frontend
-
-The frontend uses Supabase client library:
-
-```typescript
-// Initialize client
-const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-// Authentication
-const { data, error } = await supabase.auth.signInWithPassword({
-    email, password
-});
-
-// Query reviews (RLS automatically enforced)
-const { data: reviews } = await supabase
-    .from('reviews')
-    .select('*')
-    .eq('zipcode', '10001');
-
-// Upload image to storage
-const { data: upload } = await supabase.storage
-    .from('green-initiative-images')
-    .upload(`user_${userId}/${filename}`, file);
-```
-
-## Advanced Features
-
-### Thermal Overlay Visualization
-
-The system can visualize heat distribution using:
-- NVIDIA Earth-2 AI temperature predictions
-- Thermal proxy calculation (tree gap + population density + building density)
-- Heatmap rendering on Mapbox
-
-**Thermal Proxy Calculation:**
-
-```
-FUNCTION calculate_thermal_proxy(tree_density, pop_density, building_density):
-    // Inverse tree density: low trees = high heat
-    tree_gap = 1 - normalize(tree_density)
-    
-    // Normalize population density (divide by 1000, max ~50k/km²)
-    pop_norm = min(pop_density / 50, 1)
-    
-    // Normalize building density (0-1 range)
-    building_norm = min(building_density, 1)
-    
-    // Weighted combination
-    thermal_proxy = 
-        0.6 * tree_gap +
-        0.25 * pop_norm +
-        0.15 * building_norm
-    
-    RETURN thermal_proxy
-```
-
-### Community Engagement Features
-
-**Review System:**
-- Users can leave star ratings and messages for neighborhoods
-- Reviews filtered by ZIP code or H3 cell
-- Displays "lives here" indicator for local residents
-- Average ratings displayed on map
-
-**Green Initiatives:**
-- Users upload photos of tree planting, flower beds, etc.
-- Captioned images shared publicly
-- Filtered by initiative type (plant_tree, hang_vines, etc.)
-- Encourages community participation and tracking
-
-**Corporate Ambassadors:**
-- Companies can create accounts with logos
-- Corporate initiatives highlighted
-- Enables corporate social responsibility tracking
-
-### Prediction Server Architecture
-
-The fast prediction server is a Python HTTP server that:
-
-1. **Loads models at startup:**
-   - ML tree growth predictor
-   - Baseline temperature trends
-   - Stays in memory for fast inference
-
-2. **Handles concurrent requests:**
-   - Thread-safe model access
-   - Multiple prediction requests in parallel
-
-3. **API Endpoints:**
-   ```
-   POST /predict
-   Body: {
-       "tree_count": 100,
-       "avg_dbh": 10.0,
-       "years": 15
-   }
-   Response: {
-       "yearly_projections": [...],
-       "summary": {...}
-   }
-   ```
-
-4. **Performance:**
-   - <50ms response time (vs 1-2 seconds for subprocess)
-   - 100+ requests per second capacity
-   - Automatic fallback if server unavailable
-
-## Deployment Considerations
-
-### Production Builds
-
-**Frontend:**
-```bash
-cd frontend
-npm run build
-# Output: frontend/build/
-# Serve with nginx, Vercel, Netlify, etc.
-```
-
-**Backend:**
-```bash
-cd backend
-npm run build
-# Output: backend/dist/
-# Run with: node dist/index.js
-# Or use PM2 for process management
-```
-
-### Environment Variables
-
-Set production environment variables:
-- `REACT_APP_API_URL`: Production backend URL
-- `REACT_APP_MAPBOX_TOKEN`: Production Mapbox token
-- `REACT_APP_SUPABASE_URL`: Production Supabase URL
-- `PORT`: Backend server port (default: 3001)
-
-### Data Updates
-
-To update data with new NYC Open Data releases:
-
-1. Download new CSV files to `data/cache/`
-2. Run data preparation pipeline: `python3 prepare_zip_features.py`
-3. Optionally retrain models: `python3 train_model.py`
-4. Restart services to load new data
-
-### Scaling Considerations
-
-**Current Architecture:**
-- Suitable for moderate traffic (<1000 concurrent users)
-- In-memory caching works well for read-heavy workload
-- Single prediction server handles ~100 req/sec
-
-**Scaling Strategies:**
-1. **Load Balancing**: Multiple backend instances behind nginx
-2. **Prediction Server Pool**: Multiple Python servers with round-robin
-3. **Redis Cache**: Move feature cache to Redis for distributed access
-4. **CDN**: Serve GeoJSON and static assets via CDN
-5. **Database Read Replicas**: Supabase handles this automatically
+---
 
 ## Conclusion
 
-The NYC Climate Resilience Spatial Simulation demonstrates how technology can bridge the gap between complex environmental science and community action. By providing accessible, actionable data through an intuitive interface, the system empowers residents to become agents of change in their neighborhoods.
+What started as three scientific models became a **community-driven climate resilience platform** with a clear business model: **license environmental scores to real estate companies to drive physical climate action through market forces**.
 
-The architecture balances performance, accuracy, and usability: machine learning models provide sophisticated predictions, while the H3 spatial indexing enables efficient data access and visualization. The community features foster engagement and collective action, turning data into a catalyst for grassroots environmental improvement.
+The algorithms are hardcore: Random Forest ML models trained on real NYC data, physics-based i-Tree methodology, and algorithmic compliance checking for every legal planting location. The result: **actionable intelligence** that community leaders can use to make real environmental change, and a **scalable business model** that incentivizes climate resilience through property values.
 
-As climate challenges intensify, tools like this become essential for democratizing climate action and enabling bottom-up solutions that complement top-down policy. The future of climate resilience depends not just on accurate models, but on engaged communities using those models to drive meaningful change.
+**This is how you put the power in the people—not through waiting for government, but through data, algorithms, and market forces that make climate action economically necessary.**

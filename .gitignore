@@ -1,0 +1,84 @@
+# Healthcare Productivity Dashboard
+Healthcare Productivity Dashboard/node_modules/
+Healthcare Productivity Dashboard/dist/
+Healthcare Productivity Dashboard/build/
+
+# Urban Futures - Node modules
+urban futures/frontend/node_modules/
+urban futures/backend/node_modules/
+urban futures/*/node_modules/
+
+# Urban Futures - Build folders
+urban futures/frontend/build/
+urban futures/backend/build/
+urban futures/backend/dist/
+urban futures/cpp/build/
+urban futures/*/build/
+urban futures/*/dist/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+*.egg-info/
+dist/
+build/
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# C++
+*.o
+*.a
+*.so
+*.dylib
+
+# Data (large files)
+urban futures/data/cache/*.csv
+urban futures/data/models/*.parquet
+urban futures/data/models/*.bin
+urban futures/data/models/*.pkl
+!urban futures/data/models/*.json
+
+# Large coordinate/tree data files
+urban futures/data/processed/*tree*coordinates*.json
+urban futures/data/processed/*planting*locations*.json
+urban futures/frontend/public/data/processed/*coordinates*.json
+urban futures/frontend/build/data/processed/*.json
+
+# Environment
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# IDE
+.vscode/
+.idea/
+cursor/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary
+tmp/
+temp/
+*.tmp
